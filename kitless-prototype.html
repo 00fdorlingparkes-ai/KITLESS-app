@@ -1,0 +1,1764 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KITLESS — swap the kit, keep the session</title>
+<meta name="description" content="Find the closest substitute for a hybrid race station using the equipment you actually have.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#C7CAC0; --paper-2:#B4B9AD; --card:#E4E6DD;
+  --ink:#1E211C; --ink-2:#333831; --ink-soft:#5A6058;
+  --rule:#A9AEA2; --rule-soft:#C0C5B9;
+  --pop:#23505E; --pop-mid:#2F7387; --pop-tint:#DCEAEF; --pop-deep:#16303A;
+  --warm:#DE5A2E; --warm-bright:#F0784A;
+  --flag-tint:#DCEAEF; --flag:#2F93AE; --flag-ink:#1F5A6B; --flag-bright:#4BB4CE;
+  --shadow:0 1px 2px rgba(30,33,28,.07), 0 4px 14px rgba(30,33,28,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+  font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:600px;margin:0 auto;padding:0 20px 72px}
+.skip{position:absolute;left:-9999px;top:0;background:var(--ink);color:#fff;padding:10px 16px;z-index:10}
+.skip:focus{left:0}
+
+/* masthead */
+.mast{padding:32px 0 0}
+.logo{
+  font-family:"Barlow Condensed",sans-serif; font-weight:700; font-size:52px;
+  letter-spacing:.05em; text-transform:uppercase; line-height:.86; margin:0;
+}
+.logo span{color:var(--warm)}
+.tag{
+  margin:11px 0 0; font-family:"Barlow Condensed",sans-serif; font-weight:500;
+  font-size:22px; letter-spacing:.055em; text-transform:uppercase; color:var(--ink-2);
+}
+.tag span{color:var(--warm)}
+.indep{
+  margin:16px 0 0; padding:9px 0 22px; border-top:1px solid var(--rule);
+  font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.09em;
+  line-height:1.7; color:var(--ink-soft); text-transform:uppercase;
+}
+.indep b{color:var(--ink-2);font-weight:500}
+
+/* step scaffold */
+.step{display:grid;grid-template-columns:36px 1fr;gap:16px;padding:24px 0 6px;border-top:1px solid var(--rule)}
+.marker{position:relative}
+.marker span{
+  display:block; font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600;
+  letter-spacing:.05em; color:var(--pop); padding-top:2px;
+}
+.marker::after{content:"";position:absolute;left:8px;top:26px;bottom:-6px;width:2px;background:var(--pop-tint)}
+.step:last-of-type .marker::after{display:none}
+.head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:3px}
+h2{
+  font-family:"Barlow Condensed",sans-serif; font-weight:600; font-size:26px;
+  letter-spacing:.02em; text-transform:uppercase; margin:0; line-height:1.05;
+}
+.count{
+  font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--ink-soft);
+}
+.hint{font-size:13.5px;color:var(--ink-soft);margin:4px 0 15px}
+.waiting{
+  border:1.5px dashed var(--rule); border-radius:3px; padding:18px;
+  color:var(--ink-soft); font-size:13.5px; text-align:center;
+}
+
+/* locker */
+.search{
+  width:100%; padding:11px 13px; margin-bottom:16px; border:1.5px solid var(--rule);
+  border-radius:3px; background:var(--card); color:var(--ink); font:inherit; font-size:14px;
+}
+.search::placeholder{color:#7C8278}
+.search:focus{outline:none;border-color:var(--pop);box-shadow:0 0 0 3px var(--pop-tint)}
+.weakflag{
+  margin:0 0 16px; padding:11px 13px; background:var(--flag-tint);
+  border-left:3px solid var(--flag); border-radius:0 3px 3px 0;
+  font-size:12.5px; line-height:1.6; color:var(--flag-ink);
+}
+.weakflag b{display:block;margin-bottom:3px;font-weight:600}
+.morebtn{
+  display:block; width:100%; margin:0 0 12px; padding:11px 14px;
+  background:var(--card); border:1.5px solid var(--rule); border-radius:4px; cursor:pointer;
+  font-family:"Barlow Condensed",sans-serif; font-size:16px; font-weight:600; letter-spacing:.05em;
+  text-transform:uppercase; color:var(--pop);
+}
+.morebtn:hover{border-color:var(--pop);background:var(--pop-tint)}
+.cited{margin:0 0 11px}
+.cited a{color:var(--pop);text-decoration:underline;text-underline-offset:2px}
+.cited em{display:block;font-style:normal;margin-top:3px;color:var(--ink-soft);font-size:12.5px;line-height:1.55}
+.citelist{font-size:13px;line-height:1.9}
+.citelist a{color:var(--pop);text-decoration:underline;text-underline-offset:2px}
+.weighting a{color:var(--pop)}
+.csvbox{
+  resize:vertical; min-height:120px; margin-bottom:0; white-space:pre;
+  font-family:"IBM Plex Mono",monospace; font-size:11px; line-height:1.6;
+}
+.group{margin-bottom:16px}
+.group[hidden]{display:none}
+.group h3{
+  font-family:"IBM Plex Mono",monospace; font-size:9.5px; font-weight:400;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--ink-soft);
+  margin:0 0 8px; padding-bottom:6px; border-bottom:1px solid var(--rule-soft);
+}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{
+  font-family:"Barlow Condensed",sans-serif; font-size:16px; font-weight:500;
+  letter-spacing:.04em; text-transform:uppercase; padding:7px 12px 6px;
+  border:1.5px solid var(--rule); background:var(--card); color:var(--ink-soft);
+  cursor:pointer; border-radius:3px;
+}
+.chip:hover{border-color:var(--pop-mid);color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--warm);border-color:var(--warm);color:#fff}
+.chip[hidden]{display:none}
+.lockerbar{display:flex;justify-content:space-between;align-items:center;margin-top:4px;gap:12px}
+.linkbtn{
+  background:none;border:none;padding:0;cursor:pointer; font-family:"IBM Plex Mono",monospace;
+  font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--pop);
+  text-decoration:underline; text-underline-offset:3px;
+}
+.custom{
+  margin-top:12px; padding:12px 14px; background:var(--pop-tint);
+  border-left:3px solid var(--pop); border-radius:0 3px 3px 0;
+}
+.custom b{display:block;font-size:13.5px;margin-bottom:3px}
+.custom p{margin:0;color:var(--ink-2);font-size:12.5px;line-height:1.55}
+.pill{
+  display:inline-block; margin:8px 5px 0 0; padding:4px 9px 3px;
+  border:1.5px dashed var(--pop-mid); border-radius:3px; color:var(--pop);
+  font-family:"Barlow Condensed",sans-serif; font-size:15px; letter-spacing:.04em;
+  text-transform:uppercase;
+}
+
+/* splash — first screen, name and slogan only */
+.splash{
+  position:fixed; inset:0; z-index:20; background:var(--paper);
+  display:flex; flex-direction:column; cursor:pointer; text-align:left;
+  border:none; padding:0; font:inherit; color:inherit; width:100%;
+}
+.splash[hidden]{display:none}
+.splash-top{flex:1;display:flex;flex-direction:column;justify-content:center;padding:34px 26px;max-width:640px;margin:0 auto;width:100%}
+.splash-name{
+  font-family:"Barlow Condensed",sans-serif; font-weight:700; font-size:clamp(72px,21vw,140px);
+  letter-spacing:.01em; text-transform:uppercase; line-height:.82; margin:0; color:var(--ink);
+}
+.splash-name span{color:var(--warm)}
+.splash-tag{
+  margin:14px 0 0; font-family:"Barlow Condensed",sans-serif; font-weight:600;
+  font-size:clamp(16px,3.6vw,20px); letter-spacing:.05em; text-transform:uppercase;
+  color:var(--ink-2);
+}
+/* Coral is too light against sage-stone for text this size, so the second half takes the deeper
+   petrol instead. Same family as the band, still clearly a two-tone line. */
+.splash-tag span{color:var(--pop)}
+.splash-rule{width:52px;height:4px;background:var(--warm);margin:22px 0 0}
+/* Deeper than --pop so the one true coral clears contrast on it. At --pop the coral only reached
+   3.0:1 and needed a lighter tint, which read as a second, inconsistent orange. */
+.splash-band{background:var(--pop-deep);padding:26px}
+.splash-band-in{max-width:640px;margin:0 auto;width:100%}
+.splash-slogan{
+  margin:0; font-family:"Barlow Condensed",sans-serif; font-weight:600;
+  font-size:clamp(24px,5vw,29px); letter-spacing:.02em; line-height:1.24; color:#fff;
+  max-width:24ch;
+}
+.splash-slogan span{color:var(--warm)}
+.splash-foot{
+  margin:18px 0 0; font-family:"IBM Plex Mono",monospace; font-size:9px; letter-spacing:.09em;
+  line-height:1.75; text-transform:uppercase; color:#fff; opacity:.78;
+}
+/* Cream, not coral: at 10px no orange clears 4.5:1 on the band, and it is a hint rather than an
+   accent. Keeping it coral would reintroduce the mismatched second orange. */
+.splash-go{
+  display:flex; align-items:center; gap:9px; margin-top:20px;
+  font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.15em;
+  text-transform:uppercase; color:#fff; opacity:.78;
+}
+.splash-go i{font-style:normal;font-size:15px;line-height:1}
+
+/* landing page */
+.landing-blurb{font-size:14.5px;color:var(--ink-2);line-height:1.65;margin:22px 0 0;max-width:520px}
+.landing-blurb strong{color:var(--ink);font-weight:600}
+.modepicks{display:grid;gap:12px;margin:26px 0 6px}
+@media (min-width:520px){.modepicks{grid-template-columns:1fr 1fr}}
+.modecard{
+  display:block; text-align:left; width:100%; background:var(--card);
+  border:1.5px solid var(--rule); border-radius:5px; padding:18px 18px 16px;
+  cursor:pointer; color:var(--ink);
+}
+.modecard:hover{border-color:var(--pop)}
+.modecard b{
+  display:block; font-family:"Barlow Condensed",sans-serif; font-weight:600; font-size:21px;
+  letter-spacing:.02em; text-transform:uppercase; margin-bottom:6px;
+}
+.modecard b span{color:var(--warm)}
+.modecard p{margin:0;font-size:13px;color:var(--ink-soft);line-height:1.55}
+.landing-about{
+  margin-top:8px; font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--pop);
+}
+
+/* workspace back bar */
+.workbar{display:flex;align-items:center;gap:12px;padding:22px 0 0}
+.worktitle{
+  font-family:"Barlow Condensed",sans-serif; font-size:15px; font-weight:600;
+  letter-spacing:.04em; text-transform:uppercase; color:var(--ink-soft);
+}
+
+/* session builder */
+.sessopts{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:16px 0 0}
+.fmt{display:flex;gap:6px}
+.numfld{
+  display:inline-flex; align-items:center; gap:7px; font-family:"IBM Plex Mono",monospace;
+  font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-soft);
+}
+.numfld input{
+  width:58px; padding:6px 8px; border:1.5px solid var(--rule); border-radius:3px;
+  background:var(--card); color:var(--ink); font:inherit; font-size:13px;
+}
+.budgetline{
+  margin:0 0 16px; padding:10px 13px; border-radius:0 3px 3px 0; font-size:13px; line-height:1.55;
+  background:var(--pop-tint); border-left:3px solid var(--pop); color:var(--ink-2);
+}
+.budgetline b{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--pop)}
+.budgetline.over{background:var(--flag-tint);border-left-color:var(--flag);color:var(--flag-ink)}
+.budgetline.over b{color:var(--flag-ink)}
+.pairblock{
+  margin-top:9px; padding-top:9px; border-top:1px dashed var(--rule);
+}
+.pairtag{
+  display:inline-block; margin-bottom:6px; font-family:"IBM Plex Mono",monospace; font-size:9px;
+  letter-spacing:.13em; text-transform:uppercase; color:var(--pop);
+}
+.picklist{margin-top:16px}
+.pickrow{
+  background:var(--card); border:1.5px solid var(--rule-soft); border-left:3px solid var(--pop);
+  border-radius:0 3px 3px 0; padding:12px 14px; margin-bottom:8px;
+}
+.pickrow-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.pickrow-head b{
+  font-family:"Barlow Condensed",sans-serif; font-size:17px; font-weight:600;
+  letter-spacing:.02em; text-transform:uppercase;
+}
+.pickrow-default{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--ink-soft)}
+.pickrow-remove{
+  background:none;border:none;padding:0 2px;cursor:pointer;color:var(--ink-soft);
+  font-size:16px;line-height:1;flex-shrink:0;
+}
+.pickrow-remove:hover{color:var(--flag-ink)}
+.ovr{display:flex;gap:14px;margin-top:9px;flex-wrap:wrap}
+.ovr label{
+  display:flex; align-items:center; gap:6px; font-family:"IBM Plex Mono",monospace;
+  font-size:9.5px; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-soft);
+}
+.ovr input{
+  width:64px; padding:5px 7px; border:1.5px solid var(--rule); border-radius:3px;
+  background:var(--paper); color:var(--ink); font:inherit; font-size:12.5px;
+}
+.ovr input:focus,.numfld input:focus{outline:none;border-color:var(--pop);box-shadow:0 0 0 3px var(--pop-tint)}
+
+/* athlete panel */
+.athlete{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:10px;margin-bottom:6px}
+.fld[hidden]{display:none}
+.fld label{
+  display:block; font-family:"IBM Plex Mono",monospace; font-size:9px;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--ink-soft); margin-bottom:5px;
+}
+.fld input,.fld select{
+  width:100%; padding:9px 10px; border:1.5px solid var(--rule); border-radius:3px;
+  background:var(--card); color:var(--ink); font:inherit; font-size:14px;
+}
+.fld input:focus,.fld select:focus{outline:none;border-color:var(--pop);box-shadow:0 0 0 3px var(--pop-tint)}
+.lvlhint{
+  margin:9px 0 0; font-size:12.5px; line-height:1.55; color:var(--ink-soft);
+}
+.healthnote{
+  margin:13px 0 0; padding:11px 13px; background:var(--flag-tint);
+  border-left:3px solid var(--flag); border-radius:0 3px 3px 0;
+  font-size:12.5px; line-height:1.6; color:var(--flag-ink);
+}
+.healthnote b{display:block;margin-bottom:3px;font-weight:600}
+.stdline{
+  margin:10px 0 0; font-family:"IBM Plex Mono",monospace; font-size:10px;
+  letter-spacing:.07em; text-transform:uppercase; color:var(--ink-soft); line-height:1.7;
+}
+.saved{
+  font-family:"IBM Plex Mono",monospace; font-size:9px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--pop);
+}
+
+/* feedback */
+.scale{display:flex;flex-wrap:wrap;gap:4px}
+.scale button{
+  flex:1; min-width:30px; padding:8px 0; border:1.5px solid var(--rule);
+  background:var(--paper); color:var(--ink-soft); border-radius:3px; cursor:pointer;
+  font-family:"IBM Plex Mono",monospace; font-size:12px;
+}
+.scale button:hover{border-color:var(--flag)}
+.scale button[aria-pressed="true"]{background:var(--flag);border-color:var(--flag);color:#fff}
+.fbdone{margin-top:9px;font-size:12.5px;color:var(--flag-ink)}
+.caterate{margin-top:13px;border-top:1px solid var(--rule-soft);padding-top:12px}
+.caterate[hidden]{display:none}
+.caterate p{margin:0 0 8px;font-size:12px;color:var(--ink-soft)}
+
+/* races */
+.races{display:flex;flex-wrap:wrap;gap:6px}
+.race{
+  font-family:"Barlow Condensed",sans-serif; font-size:18px; font-weight:600;
+  letter-spacing:.045em; text-transform:uppercase; padding:9px 15px 7px;
+  border:1.5px solid var(--ink-2); background:var(--card); color:var(--ink);
+  cursor:pointer; border-radius:3px;
+}
+.race:hover{border-color:var(--pop);color:var(--pop)}
+.race[aria-pressed="true"]{background:var(--pop);border-color:var(--pop);color:#fff}
+.blurb{
+  margin:14px 0 0; padding:13px 15px; background:var(--card); border-radius:3px;
+  border-left:3px solid var(--pop); font-size:13.5px; box-shadow:var(--shadow);
+}
+.blurb em{display:block;font-style:normal;margin-top:6px;color:var(--ink-soft);font-size:12.5px}
+.attrib{
+  margin:10px 0 0; font-family:"IBM Plex Mono",monospace; font-size:9.5px;
+  letter-spacing:.08em; line-height:1.75; color:var(--ink-soft); text-transform:uppercase;
+}
+
+/* stations */
+.stations{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.station{
+  position:relative; text-align:left; background:var(--card);
+  border:1.5px solid var(--rule-soft); border-left:3px solid var(--rule);
+  padding:11px 12px 12px; cursor:pointer; border-radius:3px; color:var(--ink);
+  font-family:"Barlow Condensed",sans-serif; font-size:17px; font-weight:500;
+  letter-spacing:.03em; text-transform:uppercase; line-height:1.14;
+}
+.station:hover{border-left-color:var(--pop-mid)}
+.station em,.station u{display:block;font-family:"IBM Plex Mono",monospace;font-style:normal;text-decoration:none}
+.station em{font-size:9px;letter-spacing:.13em;color:var(--ink-soft);margin-bottom:5px}
+.station u{font-size:10px;letter-spacing:.03em;color:var(--ink-soft);margin-top:5px;text-transform:none}
+.station[aria-pressed="true"]{background:var(--pop);border-color:var(--pop);color:#fff}
+.station[aria-pressed="true"] em,.station[aria-pressed="true"] u{color:#A8C8D4}
+
+/* readout */
+.tally{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.09em;
+  text-transform:uppercase; color:var(--ink-soft); margin:0 0 6px;
+}
+.estflag{
+  display:flex; gap:8px; align-items:flex-start; margin:0 0 18px; padding:9px 12px;
+  background:var(--flag-tint); border-left:3px solid var(--flag); border-radius:0 3px 3px 0;
+  font-size:12.5px; color:var(--flag-ink); line-height:1.5;
+}
+.card{
+  background:var(--card); border:1px solid var(--rule-soft); border-radius:4px;
+  padding:15px 15px 12px; margin-bottom:9px; box-shadow:var(--shadow);
+}
+.top{display:flex;gap:12px;align-items:flex-start}
+.rank{
+  font-family:"Barlow Condensed",sans-serif; font-weight:700; font-size:28px;
+  line-height:.9; color:var(--rule); min-width:26px;
+}
+.nm{flex:1;min-width:0}
+.nm h4{
+  font-family:"Barlow Condensed",sans-serif; font-weight:600; font-size:21px;
+  letter-spacing:.02em; text-transform:uppercase; margin:0; line-height:1.08;
+}
+.kitline{
+  font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.07em;
+  text-transform:uppercase; color:var(--ink-soft); margin:5px 0 0;
+}
+.readout{
+  margin-top:12px; background:var(--ink); border-radius:4px;
+  padding:12px 13px 10px; display:flex; gap:15px; align-items:flex-end;
+}
+.score{line-height:1}
+.score b{
+  display:block; font-family:"IBM Plex Mono",monospace; font-weight:600;
+  font-size:36px; letter-spacing:-.035em; color:#fff;
+}
+.score b i{font-style:normal;font-size:18px;letter-spacing:0;opacity:.8}
+.score span{
+  display:block; font-family:"IBM Plex Mono",monospace; font-size:8px;
+  letter-spacing:.16em; text-transform:uppercase; color:#fff; opacity:.6; margin-top:4px;
+}
+.bars{flex:1;display:flex;gap:3px;align-items:flex-end;height:46px}
+.bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;height:100%;gap:4px}
+.bar i{display:block;background:var(--warm-bright);border-radius:1px;min-height:2px}
+.bar u{
+  display:block;text-decoration:none;text-align:center;
+  font-family:"IBM Plex Mono",monospace;font-size:7px;letter-spacing:.03em;
+  color:#fff;opacity:.5;
+}
+/* The weakest component must not be signalled by colour alone — green against orange is the hardest
+   pairing to separate for red-green colour blindness, so the label is underlined and brought to full
+   opacity as well. */
+.bar[data-low="1"] i{background:var(--flag-bright)}
+.bar[data-low="1"] u{opacity:1;font-weight:600;text-decoration:underline;text-underline-offset:2px}
+
+/* prescription */
+.rx{
+  margin-top:12px; padding:12px 14px; background:var(--pop-tint);
+  border-radius:3px; border-left:3px solid var(--pop);
+}
+.rx b{
+  display:block; font-family:"IBM Plex Mono",monospace; font-size:9px;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--pop); margin-bottom:5px;
+}
+.rx .dose{
+  font-family:"Barlow Condensed",sans-serif; font-size:23px; font-weight:600;
+  letter-spacing:.02em; text-transform:uppercase; line-height:1.1; color:var(--ink);
+}
+.rx .cue{margin:6px 0 0;font-size:12.5px;color:var(--ink-2);line-height:1.5}
+.rx .cue em{font-style:normal;color:var(--ink-soft)}
+
+.note{margin:11px 0 0;font-size:13.5px;display:flex;gap:9px;align-items:baseline}
+.note b{
+  font-family:"IBM Plex Mono",monospace; font-size:9px; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--ink-soft); flex-shrink:0; width:42px;
+}
+.note i{font-style:normal}
+.note.gap i{color:var(--flag-ink);font-weight:500}
+.note.howto i{color:var(--ink-2);font-size:12.5px;line-height:1.5}
+.note.suit i{color:var(--flag-ink);font-size:12.5px;line-height:1.5;font-weight:500}
+.note.pair s{text-decoration:none;font-weight:600;border-bottom:2px solid var(--pop-mid)}
+.uplift{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--pop);font-weight:600}
+
+.detail{margin-top:13px;border-top:1px solid var(--rule-soft);padding-top:12px}
+.detail[hidden]{display:none}
+.row{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.row span{
+  font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--ink-soft); width:112px; flex-shrink:0;
+}
+.track{flex:1;height:7px;background:var(--paper-2);border-radius:2px;overflow:hidden}
+/* Warm normally, cool for the weak row — matching the score panel. Both cool would make the row
+   that needs attention the quieter of the two. */
+.track i{display:block;height:100%;background:var(--warm-bright)}
+.row[data-low="1"] .track i{background:var(--flag)}
+.row[data-low="1"] span,.row[data-low="1"] b{color:var(--flag-ink);font-weight:600}
+.row b{font-family:"IBM Plex Mono",monospace;font-size:11px;width:24px;text-align:right}
+.weighting{
+  margin:11px 0 0; font-family:"IBM Plex Mono",monospace; font-size:9px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--ink-soft);
+}
+.actions{display:flex;gap:16px;margin-top:12px;padding-top:10px;border-top:1px solid var(--rule-soft)}
+.act{
+  background:none; border:none; padding:0; cursor:pointer;
+  font-family:"IBM Plex Mono",monospace; font-size:9.5px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--pop);
+}
+.act:hover{text-decoration:underline;text-underline-offset:3px}
+
+/* about */
+.about{margin-top:38px;border-top:2px solid var(--ink);padding-top:20px}
+.about > h2{margin-bottom:14px}
+details{border-bottom:1px solid var(--rule-soft);padding:2px 0}
+summary{
+  cursor:pointer; padding:11px 0; font-family:"Barlow Condensed",sans-serif;
+  font-size:18px; font-weight:600; letter-spacing:.03em; text-transform:uppercase;
+  list-style:none; display:flex; justify-content:space-between; align-items:center; gap:10px;
+}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";font-family:"IBM Plex Mono",monospace;font-size:16px;color:var(--pop)}
+details[open] summary::after{content:"−"}
+details p{margin:0 0 11px;font-size:13.5px;color:var(--ink-2);line-height:1.65}
+details p:last-child{margin-bottom:14px}
+details strong{font-weight:600;color:var(--ink)}
+.foot{
+  margin-top:26px; font-family:"IBM Plex Mono",monospace; font-size:9.5px;
+  letter-spacing:.07em; line-height:1.9; color:var(--ink-soft); text-transform:uppercase;
+}
+
+:focus-visible{outline:2.5px solid var(--pop);outline-offset:2px;border-radius:2px}
+@media (prefers-reduced-motion:no-preference){ .bar i,.track i{transition:height .28s ease,width .28s ease} }
+@media (max-width:430px){
+  .stations{grid-template-columns:1fr}
+  .step{grid-template-columns:26px 1fr;gap:11px}
+  .marker::after{left:5px}
+  .logo{font-size:44px}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main-content">Skip to the tool</a>
+
+<button class="splash" id="splash" type="button" aria-label="Enter KITLESS">
+  <div class="splash-top">
+    <h1 class="splash-name">Kit<span>less</span></h1>
+    <p class="splash-tag">Swap the kit. <span>Keep the session.</span></p>
+    <div class="splash-rule"></div>
+  </div>
+  <div class="splash-band">
+    <div class="splash-band-in">
+      <p class="splash-slogan">Find the closest substitute for any race station,
+        <span>using the kit you actually have.</span></p>
+      <p class="splash-foot">
+        Independent training tool — not affiliated with, endorsed by or connected to any race organiser.
+      </p>
+      <span class="splash-go">Tap to start <i>&rarr;</i></span>
+    </div>
+  </div>
+</button>
+
+<div class="wrap">
+
+  <header class="mast">
+    <h1 class="logo">Kit<span>less</span></h1>
+    <p class="tag">Swap the kit. <span>Keep the session.</span></p>
+    <p class="indep">
+      <b>Independent training tool.</b> Not affiliated with, endorsed by or connected to any race organiser.<br>
+      Coach-reviewed estimates — considered judgement, not measurement.
+    </p>
+  </header>
+
+  <section id="landing" hidden>
+    <p class="landing-blurb">
+      Both work from the same three things: <strong>the kit you have, your bodyweight and your
+      training experience</strong>. A pull-up is not the same exercise at 65 kg and at 150 kg, and a
+      technical lift is a poor first choice if you have not done it before — so the ranking and the
+      sets and reps change with you. The difference between the two is scale.
+    </p>
+    <div class="modepicks">
+      <button class="modecard" type="button" id="pick-free">
+        <b>One <span>swap</span></b>
+        <p>A single station you can't train today — no sled, no SkiErg, whatever it is. One clear
+        alternative, dosed for you, with the other options a tap away.</p>
+      </button>
+      <button class="modecard" type="button" id="pick-session">
+        <b>A whole <span>session</span></b>
+        <p>Several stations at once, fitted to the time you've actually got. Circuit or straight
+        sets, trimmed to finish inside your window.</p>
+      </button>
+    </div>
+    <p class="landing-about"><a href="#about" class="linkbtn" style="text-decoration:underline">About, trademarks &amp; limits</a></p>
+  </section>
+
+  <div id="workspace" hidden>
+  <div class="workbar">
+    <button class="linkbtn" type="button" id="backtolanding">‹ Back</button>
+    <span class="worktitle" id="worktitle"></span>
+  </div>
+  <main id="main-content">
+  <section class="step" id="locker">
+    <div class="marker"><span>01</span></div>
+    <div>
+      <div class="head"><h2>What have you got?</h2><span class="count" id="kitcount"></span></div>
+      <p class="hint">Tap what's available, or type anything that isn't listed — it understands most gym shorthand.</p>
+      <input class="search" id="kitsearch" type="search" autocomplete="off"
+             aria-label="Search or add equipment"
+             placeholder="Search or add kit — try &quot;wattbike&quot;, &quot;prowler&quot;, &quot;trap bar&quot;">
+      <div id="groups"></div>
+      <div class="lockerbar">
+        <button class="linkbtn" type="button" id="clearkit">Clear the locker</button>
+      </div>
+      <div class="custom" id="custom" hidden></div>
+    </div>
+  </section>
+
+  <section class="step">
+    <div class="marker"><span>02</span></div>
+    <div>
+      <div class="head"><h2>Who's training?</h2><span class="saved" id="savedflag"></span></div>
+      <p class="hint">Loads scale from bodyweight, and both your bodyweight and your training
+      experience change which substitutes suit you and how much of them to do.</p>
+      <div class="athlete">
+        <div class="fld"><label for="bw">Bodyweight (kg)</label>
+          <input id="bw" type="number" min="35" max="250" step="1" value="75" inputmode="numeric"></div>
+        <div class="fld"><label for="sex">Division</label>
+          <select id="sex"><option value="women">Women</option><option value="men" selected>Men</option></select></div>
+        <div class="fld"><label for="lvl">Experience</label>
+          <select id="lvl">
+            <option value="beg">Beginner</option>
+            <option value="int" selected>Intermediate</option>
+            <option value="adv">Advanced</option>
+          </select></div>
+        <div class="fld" id="divfield"><label for="div">Standard</label>
+          <select id="div"><option value="Open" selected>Open</option><option value="Pro">Pro</option></select></div>
+      </div>
+      <p class="lvlhint" id="lvlhint"></p>
+      <p class="stdline" id="stdline"></p>
+      <p class="healthnote">
+        <b>Injury, illness or pregnancy?</b> This tool does not account for any of them. It compares
+        movements, not people, and nothing here is medical advice. If you are injured, unwell,
+        pregnant or post-natal, speak to a qualified professional about what is appropriate for you
+        before using anything it suggests.
+      </p>
+    </div>
+  </section>
+
+  <section class="step">
+    <div class="marker"><span>03</span></div>
+    <div>
+      <div class="head"><h2>What are you training for?</h2></div>
+      <p class="hint">Each format weights the demands differently, so the same swap scores differently across races.</p>
+      <div class="races" id="races"></div>
+      <div class="blurb" id="blurb"></div>
+      <p class="attrib" id="attrib"></p>
+    </div>
+  </section>
+
+  <section class="step">
+    <div class="marker"><span>04</span></div>
+    <div id="stationbody"></div>
+  </section>
+
+  <section class="step">
+    <div class="marker"><span>05</span></div>
+    <div id="out" aria-live="polite"></div>
+  </section>
+  </main>
+  </div>
+
+  <section class="about" id="about">
+    <h2>Before you trust a number</h2>
+
+    <details>
+      <summary>How the Transfer Score works</summary>
+      <p>Every race station and every exercise is scored against the same twelve attributes — six muscle-emphasis
+      columns and six demand columns — and tagged with a primary and secondary movement pattern.</p>
+      <p>For the station you pick, each exercise is compared across eight components: movement pattern, muscles
+      involved, max strength, power, cardiovascular load, muscular endurance, core involvement and fatigue
+      profile. Those eight are combined using weights that differ by station type, because cardiovascular load
+      matters more on a SkiErg than on a loaded carry.</p>
+      <p><strong>Closeness is what scores, not size.</strong> An exercise far harder than the station is marked
+      down just as one that is far easier. A substitute should feel like the real thing, not beat it.</p>
+      <p>The pairing works on best coverage: if the first movement gives you the pull and the second gives you
+      the cardio, the pair is credited with both. That ignores order, rest and accumulated fatigue — a reasonable
+      simplification, but a simplification.</p>
+      <p><strong>The Transfer Score is about the movement; the ordering is about you.</strong> A pull-up is the
+      same swap for everyone, but not the same task at 65 kg and at 150 kg, and a technical lift is a poor first
+      choice for someone new to it. So the list is ordered by transfer <em>adjusted for</em> your bodyweight and
+      stated experience, while the percentage shown stays the honest transfer figure. Where something is ranked
+      down, the card says why. Nothing is ever hidden from you.</p>
+    </details>
+
+    <details>
+      <summary>Where the doses come from</summary>
+      <p>Each station carries a typical working time for a mid-pack athlete. The substitute is prescribed to
+      match that time, split into sets that suit the station type — short aggressive repeats for a sled, longer
+      continuous blocks for an erg.</p>
+      <p>Volume per set is converted using an estimated rate of work under fatigue. <strong>These rates are
+      approximations.</strong> A strong athlete will finish early and a newer one will run over. Treat the dose
+      as a starting point and adjust to the effort cue, which matters more than the number.</p>
+    </details>
+
+    <details>
+      <summary>What this tool can't tell you</summary>
+      <p><strong>It cannot tell you these numbers are exact.</strong> Every 0–10 value behind the model began as
+      an estimate produced by reasoning about the movements. Qualified coaches have since reviewed the model and
+      agreed the substitutions it produces are sound — but reviewing is not measuring, the values were not
+      corrected one by one, and the coaches expect some alternatives to change as it gets used. Treat the
+      rankings as an informed starting point, not a finding.</p>
+      <p>It takes account of your bodyweight and your stated experience when ranking and dosing, but it
+      <strong>cannot account for injury, illness or pregnancy</strong>, where you are in a programme, or how
+      the session sits alongside everything else in your week. If any of those apply to you, the ranking here
+      is not built for your situation — speak to a qualified professional about what is appropriate before
+      using it.</p>
+      <p>It cannot promise the swap will make you faster. Transfer of training is a judgement even when a coach
+      makes it in person.</p>
+      <p>Muscle emphasis in particular will always be expert judgement rather than data: EMG amplitude does not
+      reliably compare activation between different muscles, even after normalisation, so no study can settle
+      those columns.</p>
+    </details>
+
+    <details>
+      <summary>Where the model comes from</summary>
+      <p>The framework is <strong>dynamic correspondence</strong> — the specificity criteria set out by
+      Verkhoshansky and Siff for judging whether an exercise transfers to a target activity. That is established
+      strength-and-conditioning theory, not something invented here.</p>
+      <p>The weighting choices lean on the small but growing body of research into hybrid racing published from
+      2025 onwards, which points to aerobic capacity, endurance training volume and local muscular endurance
+      mattering more to performance than maximal strength.</p>
+      <p>Cardiovascular load can be anchored to measured MET values from the 2024 Adult Compendium of Physical
+      Activities where an equivalent activity exists. Everything else is expert judgement, which coaches have
+      reviewed and agreed with rather than measured.</p>
+    </details>
+
+    <details>
+      <summary>What backs this up — sources you can check</summary>
+      <p>Three different kinds of support, deliberately kept separate because they are not equally strong.</p>
+      <p><strong>1. Peer-reviewed research, for the framework.</strong> This is the strongest tier, and it
+      supports the <em>method</em> rather than any individual number.</p>
+      <div id="ev-science"></div>
+      <p><strong>2. Published coaching guidance, for the substitutions.</strong> Independent coaches and training
+      sites recommending specific swaps. Checkable, but it is expert opinion rather than science.</p>
+      <div id="ev-guidance"></div>
+      <p><strong>3. An agreement check you can repeat.</strong> Every substitute those sources recommend was
+      scored against this model, without adjusting anything to make them fit.</p>
+      <p id="ev-agreement"></p>
+      <p>Where the model and the guidance disagree, it is usually because a source offers a movement to cover
+      <em>one</em> component — "deadlifts mimic the hinge" — while this model scores overall closeness. Those
+      land lower here, and that is the model working as intended rather than a contradiction.</p>
+      <p><strong>What none of this establishes.</strong> No 0–10 attribute in the model has been measured, and
+      agreement with other people's judgement is not proof that either is right. The systematic review above
+      found transfer to a non-trained task is markedly smaller than to the trained task — a substitute is not
+      the station, however closely it scores. Sources were checked on the date shown and formats change; always
+      confirm current standards with the organiser.</p>
+    </details>
+
+    <details>
+      <summary>Trademarks and independence</summary>
+      <p>KITLESS is an independent tool. It is <strong>not affiliated with, endorsed by, sponsored by, licensed
+      by or connected to</strong> any race organiser, and nothing here should be read as suggesting otherwise.</p>
+      <p>Race names appear only to describe which format a session is being built for. No logos, brand colours or
+      organiser artwork are used, and all descriptions of each format are written independently.</p>
+      <p>HYROX is a trademark of Upsolut Sports GmbH and HYROX World GmbH. DEKA, DEKAFIT and SPARTAN are
+      trademarks of Spartan Race, Inc. All other marks are the property of their respective owners.</p>
+      <p>If you are a rights holder and have a concern about how your mark appears here, get in touch and it will
+      be addressed.</p>
+    </details>
+
+    <details>
+      <summary>Health, safety and your own judgement</summary>
+      <p><strong>This is not medical advice</strong>, and it is not a substitute for coaching. Training carries a
+      risk of injury.</p>
+      <p>Speak to a qualified professional before starting or changing a training programme, particularly if you
+      are returning from injury, pregnant, managing a health condition, or new to loaded movement.</p>
+      <p>Substitutions can carry technique demands the original station does not. If a movement is unfamiliar,
+      learn it light before loading it. Stop if something hurts.</p>
+    </details>
+
+    <details>
+      <summary>Station specifications and keeping current</summary>
+      <p>Station details are taken from each organiser's published race format. <strong>Formats change between
+      seasons</strong> — distances, loads, rep counts and even whole stations get revised, and one format in this
+      list has recently changed ownership.</p>
+      <p>Always check the organiser's current standards before you race. Specifications here were last reviewed
+      in August 2026.</p>
+    </details>
+
+    <details>
+      <summary>Athlete log</summary>
+      <p>Every rating you give is stored on this device only — nothing is sent anywhere. Show the log
+      below, copy it, and paste it into the Athlete Log sheet of the model workbook to see whether
+      Transfer Scores predict what athletes actually report.</p>
+      <p><button class="act" type="button" id="exportlog">Show the log as CSV</button>
+         <span class="weighting" id="logstate"></span></p>
+      <div id="logout" hidden>
+        <textarea class="search csvbox" id="csvbox" rows="7" readonly aria-label="Athlete log as CSV"></textarea>
+        <div class="actions" style="border-top:none;padding-top:0;margin-top:8px">
+          <button class="act" type="button" id="copylog">Copy to clipboard</button>
+          <button class="act" type="button" id="hidelog">Hide</button>
+        </div>
+      </div>
+    </details>
+
+    <p class="foot">
+      KITLESS · Coach-reviewed estimates, not measurements · No data leaves this page
+    </p>
+  </section>
+</div>
+
+<script>
+const DB = {"races":[{"id":"hyrox","name":"HYROX","blurb":"8 \u00d7 1 km run, each followed by a station.","note":"Station order is fixed and identical worldwide.","owner":"HYROX is a trademark of Upsolut Sports GmbH and HYROX World GmbH. KITLESS is not affiliated with or endorsed by them.","stations":[{"id":"ski","spec":"1000 m","work":258},{"id":"sledpush","spec":"50 m","work":90},{"id":"sledpull","spec":"50 m","work":120},{"id":"bbj","spec":"80 m","work":210},{"id":"row","spec":"1000 m","work":252},{"id":"farmers","spec":"200 m","work":120},{"id":"sblunge","spec":"100 m","work":210},{"id":"wallball","spec":"75 / 100 reps","work":270}]},{"id":"dekafit","name":"DEKA FIT","blurb":"10 zones, each preceded by a 500 m run. 5 km total.","note":"Zones run in fixed order 1\u201310.","owner":"DEKA, DEKAFIT and SPARTAN are trademarks of Spartan Race, Inc. KITLESS is not affiliated with or endorsed by them.","stations":[{"id":"ramlunge","spec":"30 reps","work":90},{"id":"row","spec":"500 m","work":120},{"id":"boxover","spec":"20 reps @ 24\"","work":72},{"id":"mbthrow","spec":"25 reps","work":78},{"id":"ski","spec":"500 m","work":132},{"id":"farmers","spec":"100 m","work":60},{"id":"bike","spec":"25 cal","work":78},{"id":"yoke","spec":"20 reps","work":120},{"id":"sledboth","spec":"100 m","work":150},{"id":"ramburpee","spec":"20 reps","work":120}]},{"id":"dekastrong","name":"DEKA STRONG","blurb":"The same 10 zones, no running. Usually in affiliate gyms.","note":"Zones 4 and 8 are modified for smaller spaces.","owner":"DEKA, DEKAFIT and SPARTAN are trademarks of Spartan Race, Inc. KITLESS is not affiliated with or endorsed by them.","stations":[{"id":"ramlunge","spec":"30 reps","work":90},{"id":"row","spec":"500 m","work":120},{"id":"boxover","spec":"20 reps @ 24\"","work":72},{"id":"mbsitup","spec":"25 reps","work":72},{"id":"ski","spec":"500 m","work":132},{"id":"farmers","spec":"100 m","work":60},{"id":"bike","spec":"25 cal","work":78},{"id":"shoulder","spec":"20 reps","work":120},{"id":"sledboth","spec":"100 m","work":150},{"id":"ramburpee","spec":"20 reps","work":120}]},{"id":"hybridgames","name":"The Hybrid Games","blurb":"10 stations, 600 m run before each, 200 m sprint finish.","note":"Format expanded from 9 to 10 stations with the addition of the sled pull. Ownership of the series changed in 2026, so check the format is still running before you plan around it.","owner":"The Hybrid Games and related marks are the property of their respective owners. KITLESS is not affiliated with or endorsed by them.","stations":[{"id":"bike","spec":"50 cal","work":156},{"id":"wallball","spec":"100 reps","work":270},{"id":"row","spec":"1000 m","work":252},{"id":"bbj","spec":"80 m","work":210},{"id":"dbsnatch","spec":"100 reps","work":240},{"id":"dblunge","spec":"100 m","work":210},{"id":"farmers","spec":"200 m","work":120},{"id":"sledpull","spec":"60 m","work":132},{"id":"ski","spec":"1000 m","work":258},{"id":"sledpush","spec":"60 m","work":108}]}],"stations":{"ski":{"name":"SkiErg","p1":"Vertical Pull","p2":"Cyclic Full-Body","mus":[2,3,1,9,6,7],"dem":[3,6,9,8,8,4],"profile":"Machine","excl":["Ski Erg Intervals"]},"row":{"name":"Row","p1":"Horizontal Pull","p2":"Hinge","mus":[7,7,3,8,4,6],"dem":[4,7,10,8,7,7],"profile":"Machine","excl":["Rowing Intervals"]},"bike":{"name":"Air Bike","p1":"Cyclic Full-Body","p2":"Gait","mus":[8,6,4,5,5,4],"dem":[3,7,10,8,5,6],"profile":"Machine","excl":["Assault Bike Intervals"]},"runrow":{"name":"Run\u2013Row Endurance","p1":"Gait","p2":"Horizontal Pull","mus":[7,7,6,5,3,4],"dem":[3,5,10,8,6,9],"profile":"Machine","excl":["Rowing Intervals"]},"sledpush":{"name":"Sled Push","p1":"Gait","p2":"Horizontal Push","mus":[9,7,8,3,6,3],"dem":[8,8,8,7,7,9],"profile":"Sled","excl":["Sled Push"]},"sledpull":{"name":"Sled Pull","p1":"Gait","p2":"Horizontal Pull","mus":[8,6,6,8,3,7],"dem":[7,7,8,7,7,8],"profile":"Sled","excl":["Sled Pull"]},"sledboth":{"name":"Sled Push / Pull","p1":"Gait","p2":"Horizontal Push","mus":[9,7,7,6,5,5],"dem":[8,8,8,7,7,9],"profile":"Sled","excl":["Sled Push","Sled Pull"]},"bbj":{"name":"Burpee Broad Jump","p1":"Jump","p2":"Full-Body Floor-to-Stand","mus":[8,6,6,2,6,3],"dem":[3,8,9,8,7,8],"profile":"Power-endurance","excl":[]},"farmers":{"name":"Farmer's Carry","p1":"Carry","p2":"Gait","mus":[6,6,5,7,4,10],"dem":[7,3,6,8,9,6],"profile":"Carry","excl":["Farmer's Carry"]},"sblunge":{"name":"Sandbag Lunge","p1":"Lunge","p2":"Carry","mus":[9,7,4,6,4,5],"dem":[7,4,7,9,9,10],"profile":"Strength-endurance","excl":[]},"dblunge":{"name":"Weighted Lunge","p1":"Lunge","p2":"Carry","mus":[9,7,4,5,4,6],"dem":[7,4,7,9,8,10],"profile":"Strength-endurance","excl":["Dumbbell Walking Lunge"]},"ramlunge":{"name":"RAM Reverse Lunge","p1":"Lunge","p2":"Carry","mus":[9,7,4,6,5,5],"dem":[7,3,6,9,9,9],"profile":"Strength-endurance","excl":[]},"wallball":{"name":"Wall Balls","p1":"Squat","p2":"Vertical Push","mus":[8,5,3,3,7,3],"dem":[3,7,9,9,6,8],"profile":"Power-endurance","excl":["Medicine Ball Wall Throw"]},"boxover":{"name":"Box Jump / Step Over","p1":"Jump","p2":"Lunge","mus":[9,6,7,1,2,1],"dem":[3,8,8,7,5,8],"profile":"Power-endurance","excl":["Box Step-Over"]},"mbthrow":{"name":"Med Ball Sit-Up Throw","p1":"Core Brace","p2":"Vertical Push","mus":[1,3,1,4,6,4],"dem":[3,6,7,8,10,2],"profile":"Core","excl":["Med Ball Sit-Up Throw"]},"mbsitup":{"name":"Med Ball Sit-Up","p1":"Core Brace","p2":"Vertical Push","mus":[1,3,1,3,4,3],"dem":[2,3,6,8,10,2],"profile":"Core","excl":["Med Ball Sit-Up Throw","Weighted Sit-Up"]},"yoke":{"name":"Dead Ball Yoke Over","p1":"Hinge","p2":"Full-Body Floor-to-Stand","mus":[7,8,4,7,7,7],"dem":[8,8,8,7,9,7],"profile":"Power-endurance","excl":[]},"shoulder":{"name":"Dead Ball Shoulder Over","p1":"Hinge","p2":"Full-Body Floor-to-Stand","mus":[7,8,4,7,7,7],"dem":[8,8,7,7,9,7],"profile":"Power-endurance","excl":["Sandbag Shouldering"]},"ramburpee":{"name":"RAM Weighted Burpee","p1":"Full-Body Floor-to-Stand","p2":"Vertical Push","mus":[6,6,4,5,8,6],"dem":[5,7,9,8,8,7],"profile":"Power-endurance","excl":[]},"dbsnatch":{"name":"Dumbbell Snatch","p1":"Hinge","p2":"Vertical Push","mus":[5,8,4,6,7,7],"dem":[5,9,8,7,7,6],"profile":"Power-endurance","excl":["Dumbbell Snatch"]},"maxdl":{"name":"Max Deadlift","p1":"Hinge","p2":"Core Brace","mus":[5,10,3,8,3,8],"dem":[10,5,2,2,9,4],"profile":"Max strength","excl":["Barbell Deadlift"]},"maxsquat":{"name":"Max Back Squat","p1":"Squat","p2":"Core Brace","mus":[10,7,3,6,4,4],"dem":[10,5,2,2,9,5],"profile":"Max strength","excl":["Barbell Back Squat"]},"maxpress":{"name":"Max Overhead Press","p1":"Vertical Push","p2":"Core Brace","mus":[2,3,1,5,10,6],"dem":[10,5,2,2,8,2],"profile":"Max strength","excl":["Barbell Overhead Press"]}},"exercises":[{"name":"Dumbbell Renegade Row","e1":"Dumbbells","e2":"None","p1":"Horizontal Pull","p2":"Core Brace","mus":[2,3,1,8,6,7],"dem":[5,4,5,6,9,3],"skill":2,"bw":2,"imp":0},{"name":"Bent-Over Dumbbell Row","e1":"Dumbbells","e2":"None","p1":"Horizontal Pull","p2":"Hinge","mus":[2,4,1,9,4,7],"dem":[6,4,4,6,5,2],"skill":2,"bw":0,"imp":0},{"name":"Barbell Bent-Over Row","e1":"Barbell","e2":"None","p1":"Horizontal Pull","p2":"Hinge","mus":[2,5,1,9,4,7],"dem":[8,5,4,6,6,3],"skill":2,"bw":0,"imp":0},{"name":"Suspension Trainer Row","e1":"Suspension Trainer","e2":"None","p1":"Horizontal Pull","p2":"Core Brace","mus":[2,3,1,8,4,6],"dem":[4,4,4,7,7,2],"skill":2,"bw":2,"imp":0},{"name":"Straight-Arm Band Pulldown","e1":"Resistance Bands","e2":"None","p1":"Vertical Pull","p2":"Core Brace","mus":[1,2,1,9,4,5],"dem":[3,4,4,7,5,1],"skill":1,"bw":0,"imp":0},{"name":"Band Double-Pole (Ski Simulation)","e1":"Resistance Bands","e2":"None","p1":"Vertical Pull","p2":"Cyclic Full-Body","mus":[2,3,1,9,6,6],"dem":[3,5,6,8,7,2],"skill":2,"bw":0,"imp":0},{"name":"Pull-Up","e1":"Pull-Up Bar","e2":"None","p1":"Vertical Pull","p2":"Core Brace","mus":[1,2,1,10,5,8],"dem":[7,5,5,6,6,2],"skill":2,"bw":3,"imp":0},{"name":"Lat Pulldown","e1":"Cable Machine","e2":"None","p1":"Vertical Pull","p2":"Horizontal Pull","mus":[1,2,1,9,4,7],"dem":[5,4,4,6,4,1],"skill":1,"bw":0,"imp":0},{"name":"Kettlebell Swing","e1":"Kettlebell","e2":"None","p1":"Hinge","p2":"Cyclic Full-Body","mus":[4,9,4,6,3,7],"dem":[5,9,8,8,8,7],"skill":3,"bw":0,"imp":0},{"name":"Dumbbell Snatch","e1":"Dumbbells","e2":"None","p1":"Hinge","p2":"Vertical Push","mus":[5,8,4,6,7,7],"dem":[5,9,8,7,7,6],"skill":3,"bw":0,"imp":0},{"name":"Barbell Deadlift","e1":"Barbell","e2":"None","p1":"Hinge","p2":"None","mus":[5,10,3,8,3,8],"dem":[10,6,4,5,8,6],"skill":3,"bw":0,"imp":0},{"name":"Dumbbell Romanian Deadlift","e1":"Dumbbells","e2":"None","p1":"Hinge","p2":"None","mus":[3,9,3,7,2,7],"dem":[7,3,3,6,6,5],"skill":2,"bw":0,"imp":0},{"name":"Sandbag Clean","e1":"Sandbag","e2":"None","p1":"Hinge","p2":"Full-Body Floor-to-Stand","mus":[6,8,4,7,6,7],"dem":[7,8,8,7,8,7],"skill":3,"bw":0,"imp":1},{"name":"Sandbag Shouldering","e1":"Sandbag","e2":"None","p1":"Hinge","p2":"Full-Body Floor-to-Stand","mus":[7,9,4,7,6,7],"dem":[8,8,8,7,9,7],"skill":3,"bw":0,"imp":1},{"name":"Slam Ball Slam","e1":"Slam Ball","e2":"None","p1":"Hinge","p2":"Vertical Push","mus":[4,7,3,7,6,5],"dem":[3,8,8,8,7,5],"skill":2,"bw":0,"imp":1},{"name":"Goblet Squat","e1":"Kettlebell","e2":"None","p1":"Squat","p2":"None","mus":[9,5,3,3,3,5],"dem":[6,4,6,8,7,8],"skill":1,"bw":0,"imp":0},{"name":"Barbell Front Squat","e1":"Barbell","e2":"None","p1":"Squat","p2":"None","mus":[10,6,3,5,4,4],"dem":[9,6,5,6,8,8],"skill":3,"bw":0,"imp":0},{"name":"Air Squat","e1":"Bodyweight","e2":"None","p1":"Squat","p2":"None","mus":[8,4,3,1,1,0],"dem":[1,4,7,9,4,7],"skill":1,"bw":2,"imp":0},{"name":"Dumbbell Thruster","e1":"Dumbbells","e2":"None","p1":"Squat","p2":"Vertical Push","mus":[8,5,3,3,8,6],"dem":[6,7,9,8,7,8],"skill":3,"bw":0,"imp":0},{"name":"Barbell Thruster","e1":"Barbell","e2":"None","p1":"Squat","p2":"Vertical Push","mus":[8,5,3,4,8,5],"dem":[7,7,9,8,7,8],"skill":3,"bw":0,"imp":0},{"name":"Medicine Ball Wall Throw","e1":"Medicine Ball","e2":"Wall Space","p1":"Squat","p2":"Vertical Push","mus":[8,5,3,3,7,3],"dem":[3,7,9,9,6,8],"skill":2,"bw":0,"imp":0},{"name":"Jump Squat","e1":"Bodyweight","e2":"None","p1":"Jump","p2":"Squat","mus":[9,6,7,1,1,0],"dem":[2,8,8,8,5,8],"skill":2,"bw":2,"imp":3},{"name":"Broad Jump","e1":"Open Floor Space","e2":"None","p1":"Jump","p2":"Squat","mus":[8,7,7,1,2,0],"dem":[3,9,6,5,6,8],"skill":2,"bw":2,"imp":3},{"name":"Burpee","e1":"Bodyweight","e2":"None","p1":"Full-Body Floor-to-Stand","p2":"Jump","mus":[7,5,5,2,6,2],"dem":[2,7,9,8,6,7],"skill":2,"bw":2,"imp":1},{"name":"Burpee Box Jump-Over","e1":"Box or Step","e2":"None","p1":"Jump","p2":"Full-Body Floor-to-Stand","mus":[8,6,6,2,6,2],"dem":[3,8,9,8,6,8],"skill":2,"bw":2,"imp":3},{"name":"Devil's Press","e1":"Dumbbells","e2":"None","p1":"Full-Body Floor-to-Stand","p2":"Vertical Push","mus":[6,7,4,5,8,7],"dem":[5,8,10,8,7,8],"skill":3,"bw":2,"imp":1},{"name":"Man Maker","e1":"Dumbbells","e2":"None","p1":"Full-Body Floor-to-Stand","p2":"Horizontal Pull","mus":[6,6,4,7,7,7],"dem":[5,7,9,8,8,7],"skill":3,"bw":2,"imp":1},{"name":"Kettlebell Clean & Jerk","e1":"Kettlebell","e2":"None","p1":"Full-Body Floor-to-Stand","p2":"Vertical Push","mus":[6,7,4,6,7,7],"dem":[6,8,8,7,7,6],"skill":3,"bw":0,"imp":0},{"name":"Bear Crawl","e1":"Bodyweight","e2":"None","p1":"Gait","p2":"Horizontal Push","mus":[6,4,3,5,7,5],"dem":[3,4,7,8,9,5],"skill":1,"bw":2,"imp":0},{"name":"Walking Lunge (Bodyweight)","e1":"Bodyweight","e2":"None","p1":"Lunge","p2":"Gait","mus":[8,5,4,1,1,0],"dem":[2,3,6,8,4,9],"skill":1,"bw":2,"imp":1},{"name":"Dumbbell Walking Lunge","e1":"Dumbbells","e2":"None","p1":"Lunge","p2":"Carry","mus":[9,6,4,4,3,8],"dem":[6,4,7,9,7,10],"skill":2,"bw":1,"imp":1},{"name":"Backpack Reverse Lunge","e1":"Backpack","e2":"None","p1":"Lunge","p2":"None","mus":[8,6,4,4,2,2],"dem":[5,3,6,8,7,9],"skill":2,"bw":1,"imp":1},{"name":"Barbell Front-Rack Lunge","e1":"Barbell","e2":"None","p1":"Lunge","p2":"Carry","mus":[9,6,4,6,5,4],"dem":[8,4,7,8,9,10],"skill":2,"bw":1,"imp":1},{"name":"Bulgarian Split Squat","e1":"Dumbbells","e2":"Bench","p1":"Lunge","p2":"Squat","mus":[9,7,4,3,2,6],"dem":[7,3,5,8,6,9],"skill":2,"bw":1,"imp":1},{"name":"Loaded Step-Up","e1":"Dumbbells","e2":"Box or Step","p1":"Lunge","p2":"Gait","mus":[9,6,5,3,2,6],"dem":[6,4,6,8,5,8],"skill":2,"bw":1,"imp":1},{"name":"Farmer's Carry","e1":"Dumbbells","e2":"None","p1":"Carry","p2":"Gait","mus":[5,5,5,7,3,10],"dem":[7,2,5,8,9,5],"skill":1,"bw":0,"imp":0},{"name":"Kettlebell Front-Rack Carry","e1":"Kettlebell","e2":"None","p1":"Carry","p2":"Core Brace","mus":[6,6,4,6,6,7],"dem":[6,2,5,8,10,5],"skill":2,"bw":0,"imp":0},{"name":"Suitcase Carry","e1":"Kettlebell","e2":"None","p1":"Carry","p2":"Core Brace","mus":[5,5,4,7,3,9],"dem":[6,2,4,7,10,4],"skill":1,"bw":0,"imp":0},{"name":"Sandbag Bear Hug Carry","e1":"Sandbag","e2":"None","p1":"Carry","p2":"Gait","mus":[6,6,5,7,6,5],"dem":[7,2,6,8,10,6],"skill":2,"bw":0,"imp":0},{"name":"Weight Plate Overhead Carry","e1":"Weight Plate","e2":"None","p1":"Carry","p2":"Core Brace","mus":[4,4,4,6,8,6],"dem":[6,2,4,7,9,4],"skill":1,"bw":0,"imp":0},{"name":"Backpack Carry Walk","e1":"Backpack","e2":"None","p1":"Carry","p2":"Gait","mus":[5,5,5,5,2,2],"dem":[4,2,5,8,7,6],"skill":1,"bw":0,"imp":0},{"name":"Dumbbell Farmer's Lunge","e1":"Dumbbells","e2":"None","p1":"Lunge","p2":"Carry","mus":[9,6,5,6,3,9],"dem":[7,3,7,9,9,9],"skill":2,"bw":1,"imp":1},{"name":"Treadmill Incline Walk (Loaded)","e1":"Treadmill","e2":"Backpack","p1":"Gait","p2":"Carry","mus":[7,7,8,3,2,2],"dem":[5,2,7,8,5,8],"skill":1,"bw":1,"imp":1},{"name":"Treadmill Incline Walk (Vest)","e1":"Treadmill","e2":"Weight Vest","p1":"Gait","p2":"Carry","mus":[7,7,8,3,2,2],"dem":[5,2,7,8,5,8],"skill":1,"bw":1,"imp":1},{"name":"Band-Resisted March","e1":"Resistance Bands","e2":"None","p1":"Gait","p2":"Carry","mus":[7,6,7,3,3,2],"dem":[4,4,6,7,7,7],"skill":1,"bw":0,"imp":0},{"name":"Rowing Intervals","e1":"Rowing Erg","e2":"None","p1":"Horizontal Pull","p2":"Hinge","mus":[7,7,3,8,4,6],"dem":[4,7,10,8,7,7],"skill":1,"bw":0,"imp":0},{"name":"Ski Erg Intervals","e1":"Ski Erg","e2":"None","p1":"Vertical Pull","p2":"Cyclic Full-Body","mus":[2,3,1,9,6,7],"dem":[3,6,9,8,8,4],"skill":1,"bw":0,"imp":0},{"name":"Assault Bike Intervals","e1":"Assault Bike","e2":"None","p1":"Cyclic Full-Body","p2":"Gait","mus":[8,6,4,5,5,4],"dem":[3,7,10,8,5,6],"skill":1,"bw":1,"imp":0},{"name":"Jump Rope Double-Unders","e1":"Jump Rope","e2":"None","p1":"Jump","p2":"Gait","mus":[5,5,9,1,2,3],"dem":[1,5,8,8,4,7],"skill":3,"bw":2,"imp":2},{"name":"Push-Up","e1":"Bodyweight","e2":"None","p1":"Horizontal Push","p2":"Core Brace","mus":[1,2,1,3,8,6],"dem":[3,4,5,7,6,2],"skill":1,"bw":2,"imp":0},{"name":"Dumbbell Bench Press","e1":"Dumbbells","e2":"Bench","p1":"Horizontal Push","p2":"None","mus":[1,1,1,3,10,6],"dem":[7,5,3,5,4,1],"skill":2,"bw":0,"imp":0},{"name":"Dumbbell Push Press","e1":"Dumbbells","e2":"None","p1":"Vertical Push","p2":"Squat","mus":[5,4,3,4,9,6],"dem":[6,7,6,6,7,4],"skill":2,"bw":0,"imp":0},{"name":"Barbell Overhead Press","e1":"Barbell","e2":"None","p1":"Vertical Push","p2":"Core Brace","mus":[2,3,1,5,10,6],"dem":[7,5,3,5,7,2],"skill":3,"bw":0,"imp":0},{"name":"Sled Push","e1":"Sled","e2":"None","p1":"Gait","p2":"Horizontal Push","mus":[9,7,8,3,6,3],"dem":[8,8,8,7,7,9],"skill":1,"bw":1,"imp":1},{"name":"Sled Pull","e1":"Sled","e2":"None","p1":"Gait","p2":"Horizontal Pull","mus":[8,6,6,8,3,7],"dem":[7,7,8,7,7,8],"skill":1,"bw":1,"imp":1},{"name":"Plank","e1":"Bodyweight","e2":"None","p1":"Core Brace","p2":"None","mus":[2,2,1,3,5,3],"dem":[2,1,2,7,10,1],"skill":1,"bw":2,"imp":0},{"name":"Hollow Hold","e1":"Bodyweight","e2":"None","p1":"Core Brace","p2":"None","mus":[2,3,1,3,3,1],"dem":[2,1,2,7,10,1],"skill":1,"bw":2,"imp":0},{"name":"Barbell Back Squat","e1":"Barbell","e2":"None","p1":"Squat","p2":"Core Brace","mus":[10,7,3,6,4,4],"dem":[9,5,4,5,8,8],"skill":3,"bw":0,"imp":0},{"name":"Weighted Sit-Up","e1":"Dumbbells","e2":"None","p1":"Core Brace","p2":"Vertical Push","mus":[1,3,1,3,4,4],"dem":[3,3,5,8,10,2],"skill":2,"bw":0,"imp":0},{"name":"Med Ball Sit-Up Throw","e1":"Medicine Ball","e2":"Wall Space","p1":"Core Brace","p2":"Vertical Push","mus":[1,3,1,4,6,4],"dem":[3,6,7,8,10,2],"skill":2,"bw":0,"imp":0},{"name":"Box Step-Over","e1":"Box or Step","e2":"None","p1":"Lunge","p2":"Jump","mus":[9,6,6,1,2,1],"dem":[2,5,7,8,4,8],"skill":1,"bw":2,"imp":1},{"name":"Hollow Rock","e1":"Bodyweight","e2":"None","p1":"Core Brace","p2":"None","mus":[2,3,1,3,3,1],"dem":[2,2,4,8,10,1],"skill":2,"bw":2,"imp":0},{"name":"Trap Bar Deadlift","e1":"Trap / Hex Bar","e2":"None","p1":"Hinge","p2":"Squat","mus":[7,9,3,7,3,8],"dem":[10,6,4,5,8,6],"skill":3,"bw":0,"imp":0},{"name":"Trap Bar Carry","e1":"Trap / Hex Bar","e2":"None","p1":"Carry","p2":"Gait","mus":[6,6,5,7,3,10],"dem":[8,2,5,8,9,6],"skill":2,"bw":0,"imp":0},{"name":"Dips","e1":"Dip Bars","e2":"None","p1":"Vertical Push","p2":"Horizontal Push","mus":[1,1,1,4,10,7],"dem":[7,5,4,6,6,1],"skill":2,"bw":3,"imp":0},{"name":"Ring Row","e1":"Gymnastic Rings","e2":"None","p1":"Horizontal Pull","p2":"Core Brace","mus":[2,3,1,8,4,6],"dem":[4,4,4,7,7,2],"skill":2,"bw":2,"imp":0},{"name":"Rope Climb","e1":"Climbing Rope","e2":"None","p1":"Vertical Pull","p2":"Core Brace","mus":[3,3,2,10,6,10],"dem":[7,6,6,6,8,3],"skill":3,"bw":3,"imp":0},{"name":"Battle Rope Waves","e1":"Battle Ropes","e2":"None","p1":"Cyclic Full-Body","p2":"Core Brace","mus":[3,4,2,7,7,8],"dem":[3,7,9,9,7,3],"skill":2,"bw":0,"imp":0},{"name":"Tyre Flip","e1":"Tyre","e2":"None","p1":"Hinge","p2":"Full-Body Floor-to-Stand","mus":[7,9,5,7,7,7],"dem":[9,9,8,6,8,7],"skill":3,"bw":0,"imp":1},{"name":"Sledgehammer Strikes","e1":"Sledgehammer","e2":"Tyre","p1":"Cyclic Full-Body","p2":"Core Brace","mus":[4,5,3,7,7,8],"dem":[4,8,8,8,8,3],"skill":3,"bw":0,"imp":0},{"name":"Dead Ball Over Shoulder","e1":"Dead Ball","e2":"None","p1":"Hinge","p2":"Full-Body Floor-to-Stand","mus":[7,9,4,7,7,7],"dem":[8,8,8,7,9,7],"skill":3,"bw":0,"imp":1},{"name":"Dead Ball Slam","e1":"Dead Ball","e2":"None","p1":"Hinge","p2":"Vertical Push","mus":[4,7,3,7,6,6],"dem":[4,8,8,8,7,5],"skill":2,"bw":0,"imp":1},{"name":"RAM Reverse Lunge","e1":"RAM or Aqua Bag","e2":"None","p1":"Lunge","p2":"Carry","mus":[9,7,4,6,5,5],"dem":[7,3,6,9,9,9],"skill":2,"bw":1,"imp":1},{"name":"RAM Weighted Burpee","e1":"RAM or Aqua Bag","e2":"None","p1":"Full-Body Floor-to-Stand","p2":"Vertical Push","mus":[6,6,4,5,8,6],"dem":[5,7,9,8,8,7],"skill":3,"bw":2,"imp":1},{"name":"Farmers Handle Carry","e1":"Farmers Handles","e2":"None","p1":"Carry","p2":"Gait","mus":[6,6,5,7,3,10],"dem":[8,2,6,8,9,6],"skill":2,"bw":0,"imp":0},{"name":"Yoke Carry","e1":"Yoke","e2":"None","p1":"Carry","p2":"Gait","mus":[8,7,6,7,6,5],"dem":[9,3,6,7,10,7],"skill":2,"bw":0,"imp":0},{"name":"Stone to Shoulder","e1":"Atlas Stone","e2":"None","p1":"Hinge","p2":"Full-Body Floor-to-Stand","mus":[7,9,4,7,7,7],"dem":[9,8,7,6,9,6],"skill":3,"bw":0,"imp":1},{"name":"Spin Bike Intervals","e1":"Stationary Bike","e2":"None","p1":"Cyclic Full-Body","p2":"Gait","mus":[8,5,4,2,2,1],"dem":[3,6,10,8,4,7],"skill":1,"bw":0,"imp":0},{"name":"Stair Climber Intervals","e1":"Stair Climber","e2":"None","p1":"Gait","p2":"Lunge","mus":[8,7,8,2,1,0],"dem":[3,4,9,8,5,9],"skill":1,"bw":1,"imp":1},{"name":"Elliptical Intervals","e1":"Cross Trainer","e2":"None","p1":"Gait","p2":"Cyclic Full-Body","mus":[6,6,6,4,3,2],"dem":[2,4,9,8,4,6],"skill":1,"bw":0,"imp":0},{"name":"Slider Push","e1":"Furniture Sliders","e2":"Open Floor Space","p1":"Gait","p2":"Horizontal Push","mus":[9,7,8,3,6,4],"dem":[6,7,8,8,7,9],"skill":2,"bw":1,"imp":1},{"name":"Ab Wheel Rollout","e1":"Ab Wheel","e2":"None","p1":"Core Brace","p2":"Horizontal Push","mus":[1,3,1,5,6,5],"dem":[5,3,3,7,10,2],"skill":2,"bw":2,"imp":0},{"name":"Cable Pull Walk-Back","e1":"Cable Machine","e2":"None","p1":"Gait","p2":"Horizontal Pull","mus":[7,6,6,8,3,8],"dem":[7,6,8,7,7,7],"skill":1,"bw":0,"imp":0},{"name":"Squared Cable Pull (Tempo)","e1":"Cable Machine","e2":"None","p1":"Horizontal Pull","p2":"Gait","mus":[7,6,5,9,3,8],"dem":[7,5,7,8,7,6],"skill":2,"bw":0,"imp":0},{"name":"Cable Resisted March","e1":"Cable Machine","e2":"None","p1":"Gait","p2":"Horizontal Push","mus":[9,7,8,3,5,4],"dem":[7,7,8,7,7,9],"skill":1,"bw":1,"imp":1},{"name":"Burpee Broad Jump","e1":"Open Floor Space","e2":"None","p1":"Jump","p2":"Full-Body Floor-to-Stand","mus":[8,6,6,2,6,3],"dem":[3,8,9,8,7,8],"skill":2,"bw":2,"imp":3},{"name":"Burpee to Bench Step-Up","e1":"Bench","e2":"None","p1":"Full-Body Floor-to-Stand","p2":"Lunge","mus":[7,5,4,2,6,2],"dem":[3,5,8,8,6,7],"skill":1,"bw":2,"imp":1},{"name":"Hands-Elevated Burpee","e1":"Bench","e2":"None","p1":"Full-Body Floor-to-Stand","p2":"Jump","mus":[6,5,4,2,6,2],"dem":[2,6,8,8,6,6],"skill":1,"bw":2,"imp":1},{"name":"Backward Heavy Farmer's Walk","e1":"Dumbbells","e2":"None","p1":"Gait","p2":"Horizontal Pull","mus":[8,7,7,7,3,9],"dem":[8,4,7,8,8,7],"skill":1,"bw":1,"imp":1},{"name":"Hand-Over-Hand Rope Pull","e1":"Battle Ropes","e2":"None","p1":"Horizontal Pull","p2":"Core Brace","mus":[5,6,4,9,4,9],"dem":[7,6,8,8,8,4],"skill":1,"bw":0,"imp":0},{"name":"Banded Standing Row","e1":"Resistance Bands","e2":"None","p1":"Horizontal Pull","p2":"Core Brace","mus":[4,5,3,9,4,8],"dem":[6,5,6,8,7,3],"skill":1,"bw":0,"imp":0},{"name":"Banded Seated Row","e1":"Resistance Bands","e2":"None","p1":"Horizontal Pull","p2":"Hinge","mus":[4,5,2,9,4,7],"dem":[4,4,6,8,6,3],"skill":1,"bw":0,"imp":0},{"name":"Wall Drive (Isometric Sled Push)","e1":"Wall Space","e2":"None","p1":"Gait","p2":"Horizontal Push","mus":[9,7,8,3,7,3],"dem":[8,6,7,8,7,8],"skill":1,"bw":1,"imp":0},{"name":"Heavy Goblet March","e1":"Kettlebell","e2":"None","p1":"Gait","p2":"Core Brace","mus":[9,6,6,5,6,7],"dem":[7,4,7,8,9,8],"skill":1,"bw":1,"imp":1},{"name":"Split Squat","e1":"Dumbbells","e2":"None","p1":"Lunge","p2":"Squat","mus":[9,6,4,3,2,6],"dem":[6,3,5,8,6,8],"skill":1,"bw":1,"imp":1},{"name":"Cossack Squat","e1":"Bodyweight","e2":"None","p1":"Lunge","p2":"Squat","mus":[9,6,4,2,2,2],"dem":[4,3,5,8,6,7],"skill":2,"bw":2,"imp":0},{"name":"Squat Thrust","e1":"Bodyweight","e2":"None","p1":"Full-Body Floor-to-Stand","p2":"Core Brace","mus":[7,5,4,2,5,2],"dem":[2,5,8,8,7,6],"skill":1,"bw":2,"imp":1},{"name":"Mountain Climbers","e1":"Bodyweight","e2":"None","p1":"Core Brace","p2":"Gait","mus":[6,4,3,3,6,3],"dem":[2,4,8,8,9,5],"skill":1,"bw":2,"imp":0},{"name":"Jumping Jacks","e1":"Bodyweight","e2":"None","p1":"Jump","p2":"Cyclic Full-Body","mus":[5,4,7,2,4,1],"dem":[1,4,8,8,4,6],"skill":1,"bw":2,"imp":2},{"name":"Battle Rope Double Slam","e1":"Battle Ropes","e2":"None","p1":"Vertical Pull","p2":"Cyclic Full-Body","mus":[3,5,2,8,7,8],"dem":[3,7,9,8,8,4],"skill":1,"bw":0,"imp":0},{"name":"Zercher Carry","e1":"Barbell","e2":"None","p1":"Carry","p2":"Core Brace","mus":[7,6,5,7,6,6],"dem":[8,2,6,8,10,6],"skill":2,"bw":0,"imp":0},{"name":"Medicine Ball Rainbow Slam","e1":"Medicine Ball","e2":"None","p1":"Hinge","p2":"Core Brace","mus":[5,7,3,6,6,6],"dem":[4,7,8,8,9,5],"skill":2,"bw":0,"imp":1},{"name":"Single-Arm DB Clean & Press","e1":"Dumbbells","e2":"None","p1":"Hinge","p2":"Vertical Push","mus":[5,7,4,6,8,7],"dem":[6,8,7,7,7,5],"skill":2,"bw":0,"imp":1},{"name":"Kettlebell Snatch","e1":"Kettlebell","e2":"None","p1":"Hinge","p2":"Vertical Push","mus":[5,8,4,6,7,8],"dem":[5,9,8,7,7,6],"skill":3,"bw":0,"imp":1},{"name":"Barbell Power Clean & Press","e1":"Barbell","e2":"None","p1":"Hinge","p2":"Vertical Push","mus":[6,8,4,7,8,7],"dem":[8,9,7,6,8,6],"skill":3,"bw":0,"imp":1}],"profiles":{"Machine":[20,15,5,10,20,15,10,5],"Sled":[20,15,15,15,10,10,5,10],"Carry":[20,20,15,5,10,15,15,0],"Strength-endurance":[20,15,10,5,10,20,10,10],"Power-endurance":[15,15,5,15,20,20,5,5],"Running":[25,15,5,10,25,10,5,5],"Max strength":[25,20,30,10,0,5,10,0],"Core":[20,20,5,10,10,20,15,0]},"groups":[["Bodyweight & space",["Bodyweight","Open Floor Space","Wall Space","Bench","Box or Step"]],["Free weights",["Dumbbells","Kettlebell","Barbell","Trap / Hex Bar","Weight Plate","Weight Vest","Backpack"]],["Rig, bars & cables",["Pull-Up Bar","Dip Bars","Gymnastic Rings","Climbing Rope","Suspension Trainer","Cable Machine"]],["Cardio machines",["Treadmill","Rowing Erg","Ski Erg","Assault Bike","Stationary Bike","Stair Climber","Cross Trainer"]],["Strongman & odd objects",["Sled","Sandbag","Dead Ball","Slam Ball","Medicine Ball","RAM or Aqua Bag","Atlas Stone","Tyre","Yoke","Farmers Handles","Sledgehammer","Battle Ropes"]],["Accessories",["Resistance Bands","Jump Rope","Ab Wheel","Furniture Sliders"]]],"aliases":{"erg":"Rowing Erg","concept2":"Rowing Erg","c2":"Rowing Erg","rower":"Rowing Erg","row erg":"Rowing Erg","skierg":"Ski Erg","ski":"Ski Erg","ski machine":"Ski Erg","air bike":"Assault Bike","airbike":"Assault Bike","assault":"Assault Bike","echo bike":"Assault Bike","fan bike":"Assault Bike","echo":"Assault Bike","wattbike":"Stationary Bike","spin bike":"Stationary Bike","exercise bike":"Stationary Bike","peloton":"Stationary Bike","turbo trainer":"Stationary Bike","bike":"Stationary Bike","db":"Dumbbells","dumbell":"Dumbbells","dumbells":"Dumbbells","dumbbell":"Dumbbells","free weights":"Dumbbells","kb":"Kettlebell","kettlebells":"Kettlebell","kettle bell":"Kettlebell","bb":"Barbell","bar":"Barbell","olympic bar":"Barbell","squat rack":"Barbell","rack":"Barbell","hex bar":"Trap / Hex Bar","trap bar":"Trap / Hex Bar","trx":"Suspension Trainer","straps":"Suspension Trainer","rings":"Gymnastic Rings","gym rings":"Gymnastic Rings","rope":"Climbing Rope","ropes":"Battle Ropes","battle rope":"Battle Ropes","skipping rope":"Jump Rope","skip rope":"Jump Rope","speed rope":"Jump Rope","vest":"Weight Vest","weighted vest":"Weight Vest","ruck":"Weight Vest","rucksack":"Backpack","med ball":"Medicine Ball","wall ball":"Medicine Ball","medball":"Medicine Ball","dball":"Dead Ball","d ball":"Dead Ball","deadball":"Dead Ball","atlas ball":"Atlas Stone","stone":"Atlas Stone","prowler":"Sled","tank":"Sled","torque tank":"Sled","push sled":"Sled","plyo box":"Box or Step","box":"Box or Step","step":"Box or Step","jerry cans":"Farmers Handles","farmers":"Farmers Handles","farmers walk handles":"Farmers Handles","stairmaster":"Stair Climber","stepper":"Stair Climber","stair machine":"Stair Climber","elliptical":"Cross Trainer","x trainer":"Cross Trainer","bands":"Resistance Bands","band":"Resistance Bands","resistance band":"Resistance Bands","sliders":"Furniture Sliders","towels":"Furniture Sliders","valslides":"Furniture Sliders","ram":"RAM or Aqua Bag","aqua bag":"RAM or Aqua Bag","water bag":"RAM or Aqua Bag","sandbell":"Sandbag","treadmill incline":"Treadmill","pull up bar":"Pull-Up Bar","pullup bar":"Pull-Up Bar","chin up bar":"Pull-Up Bar","dip station":"Dip Bars","parallel bars":"Dip Bars","cable":"Cable Machine","cables":"Cable Machine","lat pulldown":"Cable Machine","nothing":"Bodyweight","none":"Bodyweight","no equipment":"Bodyweight","gym floor":"Open Floor Space","matting":"Open Floor Space","studio":"Open Floor Space","field":"Open Floor Space","turf":"Open Floor Space","car park":"Open Floor Space","garden":"Open Floor Space","track":"Open Floor Space"},"stationRates":{"ski":["m",233],"sledpush":["m",33],"sledpull":["m",25],"bbj":["m",23],"row":["m",238],"farmers":["m",100],"sblunge":["m",29],"dblunge":["m",29],"ramlunge":["reps",20],"wallball":["reps",22],"boxover":["reps",17],"mbthrow":["reps",19],"mbsitup":["reps",21],"yoke":["reps",10],"shoulder":["reps",10],"sledboth":["m",40],"ramburpee":["reps",10],"bike":["cal",19],"dbsnatch":["reps",25]},"structure":{"Machine":[75,0.7,"Hold a pace you could just about repeat."],"Sled":[35,1.6,"Short, heavy, aggressive. Walk back between efforts."],"Carry":[45,1.0,"Unbroken if you can. Grip is the point."],"Strength-endurance":[60,0.8,"Steady and unbroken. This should burn, not spike."],"Power-endurance":[50,0.8,"Fast hands, controlled breathing. Don't redline early."],"Running":[150,0.5,"Race pace or a touch quicker."],"Max strength":[0,3.0,"Work up to a heavy set. Full recovery between attempts."],"Core":[40,1.0,"Braced throughout. Stop before form goes."]},"units":{"Dumbbell Renegade Row":["reps",10],"Bent-Over Dumbbell Row":["reps",14],"Barbell Bent-Over Row":["reps",13],"Suspension Trainer Row":["reps",16],"Straight-Arm Band Pulldown":["reps",16],"Band Double-Pole (Ski Simulation)":["reps",28],"Pull-Up":["reps",10],"Lat Pulldown":["reps",14],"Kettlebell Swing":["reps",22],"Dumbbell Snatch":["reps",18],"Barbell Deadlift":["reps",10],"Dumbbell Romanian Deadlift":["reps",12],"Sandbag Clean":["reps",12],"Sandbag Shouldering":["reps",10],"Slam Ball Slam":["reps",18],"Goblet Squat":["reps",16],"Barbell Front Squat":["reps",12],"Air Squat":["reps",25],"Dumbbell Thruster":["reps",14],"Barbell Thruster":["reps",13],"Medicine Ball Wall Throw":["reps",16],"Jump Squat":["reps",20],"Broad Jump":["reps",12],"Burpee":["reps",13],"Burpee Box Jump-Over":["reps",11],"Devil's Press":["reps",10],"Man Maker":["reps",8],"Kettlebell Clean & Jerk":["reps",14],"Bear Crawl":["m",25],"Walking Lunge (Bodyweight)":["m",42],"Dumbbell Walking Lunge":["m",30],"Backpack Reverse Lunge":["m",34],"Barbell Front-Rack Lunge":["m",28],"Bulgarian Split Squat":["reps",14],"Loaded Step-Up":["reps",18],"Farmer's Carry":["m",58],"Kettlebell Front-Rack Carry":["m",58],"Suitcase Carry":["m",58],"Sandbag Bear Hug Carry":["m",58],"Weight Plate Overhead Carry":["m",58],"Backpack Carry Walk":["m",58],"Dumbbell Farmer's Lunge":["m",28],"Treadmill Incline Walk (Loaded)":["m",95],"Treadmill Incline Walk (Vest)":["m",95],"Band-Resisted March":["m",70],"Rowing Intervals":["s",0],"Ski Erg Intervals":["s",0],"Assault Bike Intervals":["s",0],"Jump Rope Double-Unders":["reps",40],"Push-Up":["reps",20],"Dumbbell Bench Press":["reps",12],"Dumbbell Push Press":["reps",14],"Barbell Overhead Press":["reps",12],"Sled Push":["m",190],"Sled Pull":["m",190],"Plank":["s",0],"Hollow Hold":["s",0],"Barbell Back Squat":["reps",10],"Weighted Sit-Up":["reps",20],"Med Ball Sit-Up Throw":["reps",18],"Box Step-Over":["reps",20],"Hollow Rock":["reps",25],"Trap Bar Deadlift":["reps",10],"Trap Bar Carry":["m",58],"Dips":["reps",14],"Ring Row":["reps",16],"Rope Climb":["reps",3],"Battle Rope Waves":["s",0],"Tyre Flip":["reps",8],"Sledgehammer Strikes":["s",0],"Dead Ball Over Shoulder":["reps",10],"Dead Ball Slam":["reps",16],"RAM Reverse Lunge":["reps",15],"RAM Weighted Burpee":["reps",15],"Farmers Handle Carry":["m",58],"Yoke Carry":["m",58],"Stone to Shoulder":["reps",8],"Spin Bike Intervals":["s",0],"Stair Climber Intervals":["s",0],"Elliptical Intervals":["s",0],"Slider Push":["m",40],"Ab Wheel Rollout":["reps",12],"Cable Pull Walk-Back":["m",40],"Squared Cable Pull (Tempo)":["reps",12],"Cable Resisted March":["m",45],"Burpee Broad Jump":["m",23],"Burpee to Bench Step-Up":["reps",12],"Hands-Elevated Burpee":["reps",15],"Backward Heavy Farmer's Walk":["m",48],"Hand-Over-Hand Rope Pull":["m",42],"Banded Standing Row":["reps",18],"Banded Seated Row":["reps",20],"Wall Drive (Isometric Sled Push)":["s",0],"Heavy Goblet March":["m",44],"Split Squat":["reps",14],"Cossack Squat":["reps",14],"Squat Thrust":["reps",22],"Mountain Climbers":["reps",44],"Jumping Jacks":["reps",52],"Battle Rope Double Slam":["reps",26],"Zercher Carry":["m",42],"Medicine Ball Rainbow Slam":["reps",18],"Single-Arm DB Clean & Press":["reps",16],"Kettlebell Snatch":["reps",18],"Barbell Power Clean & Press":["reps",10]},"loads":{"Dumbbell Renegade Row":[0.15,1],"Bent-Over Dumbbell Row":[0.2,1],"Barbell Bent-Over Row":[0.5,0],"Suspension Trainer Row":[0,0],"Straight-Arm Band Pulldown":[0,0],"Band Double-Pole (Ski Simulation)":[0,0],"Pull-Up":[0,0],"Lat Pulldown":[0.5,0],"Kettlebell Swing":[0.28,0],"Dumbbell Snatch":[0.2,0],"Barbell Deadlift":[1.2,0],"Dumbbell Romanian Deadlift":[0.3,1],"Sandbag Clean":[0.35,0],"Sandbag Shouldering":[0.35,0],"Slam Ball Slam":[0.12,0],"Goblet Squat":[0.25,0],"Barbell Front Squat":[0.7,0],"Air Squat":[0,0],"Dumbbell Thruster":[0.17,1],"Barbell Thruster":[0.3,0],"Medicine Ball Wall Throw":[0.07,0],"Jump Squat":[0,0],"Broad Jump":[0,0],"Burpee":[0,0],"Burpee Box Jump-Over":[0,0],"Devil's Press":[0.15,1],"Man Maker":[0.15,1],"Kettlebell Clean & Jerk":[0.2,1],"Bear Crawl":[0,0],"Walking Lunge (Bodyweight)":[0,0],"Dumbbell Walking Lunge":[0.18,1],"Backpack Reverse Lunge":[0.15,0],"Barbell Front-Rack Lunge":[0.3,0],"Bulgarian Split Squat":[0.2,1],"Loaded Step-Up":[0.18,1],"Farmer's Carry":[0.55,1],"Kettlebell Front-Rack Carry":[0.35,1],"Suitcase Carry":[0.3,0],"Sandbag Bear Hug Carry":[0.45,0],"Weight Plate Overhead Carry":[0.15,0],"Backpack Carry Walk":[0.2,0],"Dumbbell Farmer's Lunge":[0.2,1],"Treadmill Incline Walk (Loaded)":[0.12,0],"Treadmill Incline Walk (Vest)":[0.12,0],"Band-Resisted March":[0,0],"Rowing Intervals":[0,0],"Ski Erg Intervals":[0,0],"Assault Bike Intervals":[0,0],"Jump Rope Double-Unders":[0,0],"Push-Up":[0,0],"Dumbbell Bench Press":[0.3,1],"Dumbbell Push Press":[0.2,1],"Barbell Overhead Press":[0.35,0],"Sled Push":[0,0],"Sled Pull":[0,0],"Plank":[0,0],"Hollow Hold":[0,0],"Barbell Back Squat":[0.9,0],"Weighted Sit-Up":[0.12,0],"Med Ball Sit-Up Throw":[0.07,0],"Box Step-Over":[0,0],"Hollow Rock":[0,0],"Trap Bar Deadlift":[1.3,0],"Trap Bar Carry":[0.6,0],"Dips":[0,0],"Ring Row":[0,0],"Rope Climb":[0,0],"Battle Rope Waves":[0,0],"Tyre Flip":[1.2,0],"Sledgehammer Strikes":[0,0],"Dead Ball Over Shoulder":[0.35,0],"Dead Ball Slam":[0.15,0],"RAM Reverse Lunge":[0.2,0],"RAM Weighted Burpee":[0.15,0],"Farmers Handle Carry":[0.55,1],"Yoke Carry":[0.9,0],"Stone to Shoulder":[0.45,0],"Spin Bike Intervals":[0,0],"Stair Climber Intervals":[0,0],"Elliptical Intervals":[0,0],"Slider Push":[0,0],"Ab Wheel Rollout":[0,0],"Cable Pull Walk-Back":[0.5,0],"Squared Cable Pull (Tempo)":[0.45,0],"Cable Resisted March":[0.35,0],"Burpee Broad Jump":[0,0],"Burpee to Bench Step-Up":[0,0],"Hands-Elevated Burpee":[0,0],"Backward Heavy Farmer's Walk":[0.5,1],"Hand-Over-Hand Rope Pull":[0,0],"Banded Standing Row":[0,0],"Banded Seated Row":[0,0],"Wall Drive (Isometric Sled Push)":[0,0],"Heavy Goblet March":[0.35,0],"Split Squat":[0.2,1],"Cossack Squat":[0,0],"Squat Thrust":[0,0],"Mountain Climbers":[0,0],"Jumping Jacks":[0,0],"Battle Rope Double Slam":[0,0],"Zercher Carry":[0.4,0],"Medicine Ball Rainbow Slam":[0.1,0],"Single-Arm DB Clean & Press":[0.2,0],"Kettlebell Snatch":[0.2,0],"Barbell Power Clean & Press":[0.45,0]},"divisions":{"Open":1.0,"Pro":1.5},"equipment":["Bodyweight","Open Floor Space","Dumbbells","Kettlebell","Barbell","Weight Plate","Bench","Box or Step","Pull-Up Bar","Resistance Bands","Suspension Trainer","Cable Machine","Treadmill","Rowing Erg","Ski Erg","Assault Bike","Sandbag","Slam Ball","Medicine Ball","Wall Space","Jump Rope","Sled","Backpack","Trap / Hex Bar","Weight Vest","Dip Bars","Gymnastic Rings","Climbing Rope","Battle Ropes","Tyre","Sledgehammer","Dead Ball","RAM or Aqua Bag","Farmers Handles","Yoke","Atlas Stone","Stationary Bike","Stair Climber","Cross Trainer","Furniture Sliders","Ab Wheel"],"exNotes":{"Cable Pull Walk-Back":"Walk backwards under constant tension. Keep the cable loaded the whole way \u2014 never let it slack.","Squared Cable Pull (Tempo)":"Square to the stack, heavy, and slow the return to about three seconds. The tempo is what makes this bite like a sled.","Cable Resisted March":"Belt or rope around the waist, lean into it and drive short choppy steps. Legs should feel like a sled, not a walk.","Burpee Broad Jump":"The station itself. One burpee, one maximal broad jump, repeat \u2014 no kit beyond room to travel.","Burpee to Bench Step-Up":"Chest to floor, stand, then step up onto the bench instead of jumping. Keeps the breathing cost, takes the landing out.","Hands-Elevated Burpee":"Hands on the bench rather than the floor. Shorter range, far kinder on the shoulders and easier to keep unbroken.","Bear Crawl":"Hips low, knees just off the floor, short deliberate steps. Drive the ground away rather than shuffling \u2014 it should feel like pushing, not crawling.","Backward Heavy Farmer's Walk":"Walk backwards, heavy, leaning away from the load. The reverse drag is what makes it a sled pull rather than a carry.","Hand-Over-Hand Rope Pull":"Anchor the rope, sit into a low athletic base and haul hand over hand. Braced trunk, arms doing the work.","Banded Standing Row":"Heavy band, stand tall and row to the ribs. Step back to add tension rather than rushing the reps.","Banded Seated Row":"Band round the feet, long steady pulls. Built for volume rather than load.","Wall Drive (Isometric Sled Push)":"Hands on the wall, body at a sled-push angle, drive alternate legs hard into the floor. No wall moves \u2014 the effort is all leg drive.","Heavy Goblet March":"Heaviest bell you can hold at the chest, march with high deliberate knees. The trunk fatigues before the legs do.","Split Squat":"Static stance, no travel needed. The regression to reach for when space is tight or balance is the limiter.","Cossack Squat":"Shift side to side, one leg bending deep while the other stays straight. Adds the lateral pattern the race never trains.","Squat Thrust":"Burpee without the press-up or the jump. Keeps the breathing cost, removes the impact and the shoulder load.","Mountain Climbers":"Hips low and still, drive the knees fast. Low impact, and the trunk stays loaded throughout.","Jumping Jacks":"Simple aerobic filler when there is no machine. Cheap to do badly, so keep the rhythm honest.","Battle Rope Double Slam":"Both arms overhead then slam down together, hinging as you go. This is the closest thing to a ski erg double-pole without the machine.","Zercher Carry":"Bar in the crook of the elbows. Brutal on the trunk and the answer when there are no handles in the building.","Medicine Ball Rainbow Slam":"Slam side to side in an arc over the body. The rotation is what the straight slam misses.","Single-Arm DB Clean & Press":"One clean bell floor to overhead. Slower and more controlled than a snatch, and far easier to learn.","Kettlebell Snatch":"One movement floor to overhead, no press-out. Technical \u2014 learn it light before it goes in a session.","Barbell Power Clean & Press":"The heaviest of the snatch alternatives. Power first, conditioning second."},"evidence":{"science":[{"cite":"Suarez DG, Wagle JP, et al. Dynamic Correspondence of Resistance Training to Sport: A Brief Review. Strength & Conditioning Journal, 2019.","url":"https://journals.lww.com/nsca-scj/Abstract/2019/08000/Dynamic_Correspondence_of_Resistance_Training_to.7.aspx","note":"Peer-reviewed review of the dynamic correspondence framework this model is built on. Also states plainly that transfer of resistance training to sport is complex, hard to predict and hard to assess."},{"cite":"Training Specificity for Athletes: Emphasis on Strength-Power Training. A Narrative Review, 2022.","url":"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC9680266/","note":"Sets out specificity as a strength-endurance continuum plus adherence to dynamic correspondence, which are the two axes the Transfer Score weights."},{"cite":"Task Specificity of Dynamic Resistance Training and Its Transferability to Non-trained Isometric Muscle Strength. Systematic review with meta-analysis, Sports Medicine, 2025.","url":"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC12296774/","note":"Cuts against overclaiming: transfer to non-trained tasks was markedly smaller than to the trained task. A substitute is not the station."},{"cite":"ACSM Consensus Statement: Physical Activity and Excess Body Weight and Adiposity for Adults.","url":"https://www.pathlms.com/acsm/courses/107688","note":"Basis for treating bodyweight as a factor at all. Low-impact work is more manageable at higher bodyweight, and excess mass raises mechanical stress on joints \u2014 which is why impact and bodyweight-limited movements rank lower here as weight rises."},{"cite":"Physical Activity Reduces Risk of Osteoarthritis for Those with Obesity. ACSM, 2025.","url":"https://acsm.org/wp-content/uploads/2025/02/Physical-Activity-for-Osteoarthritis-Prevention-infographic-PDF.pdf","note":"Why impact is moderated rather than removed. Ranking impact work out entirely would be worse advice, not safer: strength and impact training protect joints and reduce osteoarthritis risk."},{"cite":"Complexity: A Novel Load Progression Strategy in Strength Training. 2019.","url":"https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6616272/","note":"Basis for the technical-demand rating. Complexity is described as possibly the most important variable for teaching progressions, with programmes designed simple to complex \u2014 so technical lifts rank lower for less experienced athletes."},{"cite":"Kompf JM, Rhodes RE, Lee S. Selecting Resistance Training Exercises for Novices: A Delphi Study with Expert Consensus, 2025.","url":"https://doi.org/10.1177/15598276221115662","note":"Expert-consensus work on which exercises suit novices \u2014 the closest thing to a published basis for the beginner end of the experience scale."},{"cite":"Progression Models in Resistance Training for Healthy Adults. ACSM Position Stand.","url":"https://tourniquets.org/wp-content/uploads/PDFs/ACSM-Progression-models-in-resistance-training-for-healthy-adults-2009.pdf","note":"Supports lower prescribed volume for novices (60-70% 1RM, 8-12 reps) and higher for trained athletes. The direction of the volume multipliers follows this; the exact figures do not."}],"guidance":[{"name":"simongPT - HYROX alternative exercises","url":"https://www.simongpt.co.uk/hyrox-exercise-alternatives-how-to-train-without-the-official-equipment/","covers":"all"},{"name":"Hybrid Pro Coach - HYROX equipment alternatives","url":"https://hybridprocoach.com/blogs/hyrox/hyrox-equipment-alternatives","covers":"all"},{"name":"Hyrox Vault - training at home","url":"https://www.hyroxvault.com/blog/hyrox-train-at-home/","covers":"all"},{"name":"ROXFIT - the eight stations explained","url":"https://roxfit.app/blog/hyrox-stations-explained/","covers":"all"},{"name":"Hello Hyrox - sled push without a sled","url":"https://hellohyrox.com/2025/01/15/hyrox-training-conquering-the-sled-push-without-a-sled/","covers":"sledpush,sledboth"},{"name":"TrainRox - sled alternatives","url":"https://www.trainrox.com/training-hub/hyrox-sled-alternatives","covers":"sledpush,sledpull,sledboth"},{"name":"Rox Lyfe - sandbag lunges guide","url":"https://roxlyfe.com/hyrox-sandbag-lunges-guide/","covers":"sblunge,dblunge,ramlunge"},{"name":"HYROX official singles rulebook","url":"https://maintain.hyrox.com/rulebooks/HYROX_RulebookSingles_EN.pdf","covers":"all"}],"agreement":{"n":40,"mean":84,"atLeast70":35,"atLeast80":26,"checked":"2026-08-17"}}};
+const LABELS = ["Movement pattern","Muscles involved","Max strength","Power output",
+                "Cardiovascular load","Muscular endurance","Core involvement","Fatigue profile"];
+const SHORT  = ["PAT","MUS","STR","PWR","CRD","END","COR","FAT"];
+
+let kit = new Set(["Bodyweight", "Open Floor Space", "Dumbbells", "Bench", "Box or Step", "Pull-Up Bar", "Resistance Bands", "Treadmill", "Backpack", "Kettlebell"]);
+let race = DB.races[0];
+let stationId = null;
+let unknown = [];
+let athlete = {bw:75, sex:"men", div:"Open", lvl:"int"};
+let view = "splash";                // "splash" | "modes" | "free" | "session"
+let sessionPicks = {};              // { [stationId]: {native:number|null, time:number|null} }
+let sessionFormat = "circuit";      // "circuit" | "straight"
+let circuitRounds = 4;
+let timeBudgetMin = 40;             // how long the athlete actually has, including rest
+
+/* ---------- persistence (degrades to memory if storage is unavailable) ---------- */
+const STORE="kitless.v1";
+function save(){
+  try{ localStorage.setItem(STORE, JSON.stringify(
+    {kit:[...kit], athlete:athlete, race:race.id, unknown:unknown, sessionPicks:sessionPicks,
+     sessionFormat:sessionFormat, circuitRounds:circuitRounds, timeBudgetMin:timeBudgetMin}));
+    flagSaved(); }catch(e){}
+}
+function load(){
+  try{
+    const raw=localStorage.getItem(STORE); if(!raw) return;
+    const d=JSON.parse(raw);
+    if(Array.isArray(d.kit)&&d.kit.length) kit=new Set(d.kit);
+    if(d.athlete) athlete=Object.assign(athlete,d.athlete);
+    if(Array.isArray(d.unknown)) unknown=d.unknown;
+    const r=DB.races.find(x=>x.id===d.race); if(r) race=r;
+    if(d.sessionPicks&&typeof d.sessionPicks==="object") sessionPicks=d.sessionPicks;
+    if(d.sessionFormat==="circuit"||d.sessionFormat==="straight") sessionFormat=d.sessionFormat;
+    if(typeof d.circuitRounds==="number"&&d.circuitRounds>=1) circuitRounds=Math.min(10,d.circuitRounds);
+    if(typeof d.timeBudgetMin==="number"&&d.timeBudgetMin>=5) timeBudgetMin=Math.min(180,d.timeBudgetMin);
+    flagSaved();
+  }catch(e){}
+}
+function flagSaved(){
+  const el=document.getElementById("savedflag");
+  if(el) el.textContent="Saved on this device";
+}
+function logFeedback(row){
+  try{
+    const k=STORE+".log";
+    const arr=JSON.parse(localStorage.getItem(k)||"[]");
+    arr.push(row); localStorage.setItem(k,JSON.stringify(arr));
+  }catch(e){}
+}
+
+/* ---------- view router ----------
+   splash → modes → free | session. The splash is a fixed overlay rather than a separate document,
+   so this stays one file. `view` is never persisted: every visit starts at the splash, which is
+   where the non-affiliation line lives. */
+const splashEl=document.getElementById("splash");
+const landingEl=document.getElementById("landing");
+const workspaceEl=document.getElementById("workspace");
+const worktitleEl=document.getElementById("worktitle");
+
+function leaveSplash(){
+  if(view!=="splash") return;
+  view="modes";
+  splashEl.hidden=true;
+  landingEl.hidden=false;
+  workspaceEl.hidden=true;
+  window.scrollTo(0,0);
+}
+function enterView(v){
+  view=v;
+  splashEl.hidden = true;
+  landingEl.hidden = true;
+  workspaceEl.hidden = false;
+  worktitleEl.textContent = v==="free" ? "Free — single swap" : "Full session";
+  renderRace(); renderOut();
+  window.scrollTo(0,0);
+}
+function backToLanding(){
+  view="modes";
+  splashEl.hidden = true;
+  workspaceEl.hidden = true;
+  landingEl.hidden = false;
+  window.scrollTo(0,0);
+}
+/* Scroll the readout into view, honouring a reduced-motion preference. */
+function revealOut(){
+  const out=document.getElementById("out");
+  if(!out) return;
+  const smooth=!window.matchMedia||!window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  requestAnimationFrame(()=>{
+    out.scrollIntoView({behavior:smooth?"smooth":"auto", block:"start"});
+  });
+}
+
+splashEl.onclick=leaveSplash;
+document.getElementById("pick-free").onclick=()=>enterView("free");
+document.getElementById("pick-session").onclick=()=>enterView("session");
+document.getElementById("backtolanding").onclick=backToLanding;
+
+/* ---------- model ---------- */
+const patScore=(dp,ds,ep,es)=>ep===dp?100:(ep===ds||es===dp)?65:(es===ds)?40:15;
+const closeness=(a,b)=>Math.max(0,100-Math.abs(a-b)*10);
+
+function components(d,e){
+  const mus=Math.max(0,100-d.mus.reduce((s,v,i)=>s+Math.abs(v-e.mus[i]),0)/6*10);
+  return [patScore(d.p1,d.p2,e.p1,e.p2),mus,...d.dem.map((v,i)=>closeness(v,e.dem[i]))];
+}
+function pairComponents(d,a,b){
+  const mus=Math.max(0,100-d.mus.reduce((s,v,i)=>s+Math.abs(v-Math.max(a.mus[i],b.mus[i])),0)/6*10);
+  return [Math.max(patScore(d.p1,d.p2,a.p1,a.p2),patScore(d.p1,d.p2,b.p1,b.p2)),mus,
+          ...d.dem.map((v,i)=>closeness(v,Math.max(a.dem[i],b.dem[i])))];
+}
+/* Movement pattern is only 20% of most profiles, so a completely unrelated movement could still be
+   carried to ~75% by the six demand columns alone — which is how a Burpee Broad Jump ended up being
+   offered as a substitute for a Row. Dynamic correspondence puts movement similarity first, so an
+   unrelated pattern caps how well anything can transfer, no matter how well the demands line up.
+     pattern 15 (no relationship)      → cap 65
+     pattern 40 (weak secondary match) → cap 78
+     pattern 65 or 100                 → no cap */
+/* How much an unrelated movement is punished depends on what the station is FOR.
+   A rower and an air bike share no movement at all, yet swapping one for the other is standard
+   coaching practice, because an erg station is defined by its energy system. A sled is defined by
+   its movement, so there the pattern has to match. Two cap tables, chosen by station profile. */
+const PATTERN_CAP_MOVEMENT={15:50, 40:78};   // sleds, carries, lunges, jumps — movement is the point
+const PATTERN_CAP_ENGINE  ={15:78, 40:88};   // ergs and bikes — the energy system is the point
+const ENGINE_PROFILES={Machine:1};
+function total(w,c,profile){
+  const s=c.reduce((t,v,i)=>t+v*w[i],0)/100;
+  const table=(profile&&ENGINE_PROFILES[profile])?PATTERN_CAP_ENGINE:PATTERN_CAP_MOVEMENT;
+  const cap=table[c[0]];
+  return cap!==undefined ? Math.min(s,cap) : s;
+}
+/* You always have your own bodyweight, so it is never gated on ticking a chip. Without this, an
+   athlete who selected "Open Floor Space" but not "Bodyweight" lost every burpee, squat and plank. */
+const owns=item=>item==="Bodyweight"||kit.has(item);
+const have=e=>(e.e1==="None"||owns(e.e1))&&(e.e2==="None"||owns(e.e2));
+const esc=t=>String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+/* ---------- dosing ---------- */
+/* Round the whole value first — rounding the remainder alone yields "21:60" at 1319.5 s. */
+function mmss(s){s=Math.round(s);const m=Math.floor(s/60),r=s%60;return m+":"+String(r).padStart(2,"0");}
+function roundTo(v,step){return Math.max(step,Math.round(v/step)*step);}
+
+/* forcedSets: circuit mode fixes one set per round, so the set count comes from the round count
+   rather than the station type. Returns numeric sets/perSec/restSec as well as the display strings,
+   because the session planner has to add real seconds up to fit a time budget. */
+function prescribe(ex, work, profile, forcedSets){
+  const st=DB.structure[profile];
+  const setLen=st[0], restRatio=st[1], cue=st[2];
+  if(setLen===0 && !forcedSets){
+    return {dose:"Work up to a heavy set", detail:"Match the effort, not the clock.", cue:cue, rest:"",
+            sets:1, perSec:work||0, restSec:0};
+  }
+  /* Experience and bodyweight change how much of it you should do, not what it is. */
+  const lvlDose=LVL_DOSE[athlete.lvl]||LVL_DOSE.int;
+  work = work * lvlDose.vol * bwDoseFactor(ex);
+  let sets;
+  if(forcedSets) sets=Math.max(1,Math.round(forcedSets));
+  else { sets=Math.round(work/setLen); sets=Math.min(8,Math.max(3,sets)); }
+  const per=work/sets;
+  const u=DB.units[ex.name]||["reps",0];
+  let dose,detail,perSec=per;
+  if(u[0]==="s"){
+    const t=roundTo(per,5);
+    dose=sets+" × "+t+" s"; perSec=t;
+    detail="≈ "+mmss(sets*t)+" of work.";
+  } else if(u[0]==="m"){
+    const m=roundTo(per/60*u[1],5);
+    dose=sets+" × "+m+" m";
+    detail="≈ "+mmss(work)+" of work.";
+  } else {
+    const reps=Math.max(3,Math.round(per/60*u[1]));
+    dose=sets+" × "+reps+" reps";
+    detail="≈ "+mmss(work)+" of work.";
+  }
+  const rest=Math.max(20,Math.round(per*restRatio*lvlDose.rest/5)*5);
+  /* In a circuit you move straight to the next station, so there is no between-set rest to show —
+     the recovery is the round break, reported once at session level. */
+  return {dose:dose, detail:detail, cue:cue,
+          rest: forcedSets ? "" : (rest?rest+" s rest between sets":""),
+          sets:sets, perSec:perSec, restSec:rest};
+}
+
+/* ---------- suitability: can this athlete actually do it? ----------
+   The Transfer Score answers "does this reproduce the station". It says nothing about whether the
+   person in front of it can perform the movement. A 150 kg beginner and a 65 kg advanced athlete get
+   the same top match otherwise, which is wrong.
+
+   Every number below is a judgement call, not a measured threshold — same status as the rest of the
+   model. It reorders and warns; it never hides. */
+const LVL_RANK={beg:1,int:2,adv:3};
+const BW_EASY=90;    // at or below this, bodyweight-relative work is not penalised
+const BW_HARD=150;   // by here, the penalty is at full strength
+
+/* 0 at BW_EASY, rising to 1 at BW_HARD and beyond. */
+function bwStrain(){
+  return Math.max(0, Math.min(1, (athlete.bw - BW_EASY) / (BW_HARD - BW_EASY)));
+}
+
+/* → { mult, notes[] }. mult multiplies the transfer score for ranking only. */
+function suitability(e){
+  const lvl=LVL_RANK[athlete.lvl]||2, strain=bwStrain();
+  const skill=e.skill||2, bw=e.bw||0, imp=e.imp||0;
+  let mult=1; const notes=[];
+
+  // Technical demand beyond the athlete's stated experience.
+  if(skill>lvl){
+    const gap=skill-lvl;
+    mult *= (gap>=2 ? 0.62 : 0.80);
+    notes.push(gap>=2
+      ? "Technical for your experience — learn it light before loading it."
+      : "A step up technically — take the first sets deliberately.");
+  }
+
+  // Carrying your own bodyweight: a pull-up is a different exercise at 150 kg than at 65 kg.
+  if(bw>=2 && strain>0){
+    mult *= 1 - (0.30*strain*(bw===3?1.35:1));
+    notes.push(bw===3
+      ? "Moves your full bodyweight — scale it (band, incline or partial range) at your weight."
+      : "Bodyweight-limited — expect fewer reps than the number suggests.");
+  }
+
+  /* Impact is moderated, not avoided. ACSM's position is that low-impact work is more *manageable*
+     at higher bodyweight, but impact and resistance training also protect joints and reduce
+     osteoarthritis risk — so ranking it out entirely would be worse advice, not safer advice. */
+  if(imp>=2 && strain>0){
+    mult *= 1 - (0.18*strain);
+    notes.push("High impact — build the volume up gradually rather than avoiding it.");
+  }
+
+  /* Raw bodyweight is a crude proxy: the guidance is about adiposity, and a heavy trained athlete
+     is not the same case as a heavy untrained one. Experience partly stands in for that, so an
+     advanced athlete carries less of the bodyweight penalty. */
+  if(athlete.lvl==="adv" && mult<1) mult = mult + (1-mult)*0.35;
+
+  return {mult:Math.max(0.35,mult), notes:notes};
+}
+
+/* Volume and rest, by experience. Conservative for beginners, slightly fuller for advanced. */
+const LVL_DOSE={beg:{vol:0.75,rest:1.30}, int:{vol:1,rest:1}, adv:{vol:1.10,rest:0.90}};
+
+/* Extra volume cut on bodyweight-limited or high-impact work for heavier athletes. */
+function bwDoseFactor(e){
+  const strain=bwStrain();
+  if(!strain) return 1;
+  if((e.bw||0)>=2 || (e.imp||0)>=2) return 1 - 0.30*strain;
+  return 1;
+}
+
+/* ---------- load scaling ---------- */
+function roundLoad(kg){
+  if(kg<=0) return 0;
+  if(kg<10) return Math.max(2,Math.round(kg));
+  if(kg<40) return Math.round(kg/2)*2;
+  return Math.round(kg/5)*5;
+}
+function prescribeLoad(ex){
+  const rule=DB.loads[ex.name];
+  if(!rule||rule[0]===0) return "";
+  const total=athlete.bw*rule[0]*(DB.divisions[athlete.div]||1);
+  if(rule[1]){
+    const each=roundLoad(total/2);
+    return each>0 ? ("2 × "+each+" kg") : "";
+  }
+  const one=roundLoad(total);
+  return one>0 ? (one+" kg") : "";
+}
+
+/* ---------- locker ---------- */
+const groupsEl=document.getElementById("groups");
+const searchEl=document.getElementById("kitsearch");
+const customEl=document.getElementById("custom");
+
+DB.groups.forEach(([label,items])=>{
+  const g=document.createElement("div"); g.className="group";
+  const h=document.createElement("h3"); h.textContent=label; g.appendChild(h);
+  const c=document.createElement("div"); c.className="chips";
+  items.forEach(item=>{
+    const b=document.createElement("button");
+    b.className="chip"; b.type="button"; b.textContent=item; b.dataset.name=item;
+    b.setAttribute("aria-pressed",kit.has(item));
+    b.onclick=()=>{
+      kit.has(item)?kit.delete(item):kit.add(item);
+      b.setAttribute("aria-pressed",kit.has(item));
+      save(); renderOut();
+    };
+    c.appendChild(b);
+  });
+  g.appendChild(c); groupsEl.appendChild(g);
+});
+
+const norm=t=>t.toLowerCase().trim().replace(/[^a-z0-9 /]/g,"").replace(/\s+/g," ");
+const canonical={}; DB.equipment.forEach(e=>canonical[norm(e)]=e);
+const resolve=t=>{const n=norm(t); if(!n) return null;
+  return canonical[n]||DB.aliases[n]||DB.equipment.find(e=>norm(e).startsWith(n))||null;};
+
+function drawCustom(){
+  if(!unknown.length){customEl.hidden=true;customEl.innerHTML="";return;}
+  customEl.hidden=false;
+  customEl.innerHTML='<b>Not in the model yet</b><p>KITLESS won\'t score these until the exercise '+
+    'library covers them, so they\'re noted rather than quietly ignored.</p>'+
+    unknown.map(u=>'<span class="pill">'+esc(u)+'</span>').join("");
+}
+function filterKit(q){
+  const n=norm(q);
+  groupsEl.querySelectorAll(".group").forEach(g=>{
+    let any=false;
+    g.querySelectorAll(".chip").forEach(c=>{
+      const hit=!n||norm(c.dataset.name).includes(n);
+      c.hidden=!hit; if(hit) any=true;
+    });
+    g.hidden=!any;
+  });
+}
+searchEl.addEventListener("input",e=>filterKit(e.target.value));
+searchEl.addEventListener("keydown",e=>{
+  if(e.key!=="Enter") return;
+  e.preventDefault();
+  const raw=searchEl.value.trim(); if(!raw) return;
+  const match=resolve(raw);
+  if(match){
+    kit.add(match);
+    const b=groupsEl.querySelector('.chip[data-name="'+match.replace(/"/g,'\\"')+'"]');
+    if(b) b.setAttribute("aria-pressed","true");
+  } else if(!unknown.some(u=>norm(u)===norm(raw))){
+    unknown.push(raw); drawCustom();
+  }
+  searchEl.value=""; filterKit(""); save(); renderOut();
+});
+document.getElementById("clearkit").onclick=()=>{
+  kit.clear(); unknown=[]; drawCustom();
+  groupsEl.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed","false"));
+  save(); renderOut();
+};
+
+/* ---------- athlete ---------- */
+const bwEl=document.getElementById("bw"), sexEl=document.getElementById("sex"),
+      divEl=document.getElementById("div"), lvlEl=document.getElementById("lvl");
+const LVL_HINT={
+  beg:"Beginner — new to loaded movement, or coming back after a long break. Technical lifts are "+
+      "ranked lower and volume is kept conservative.",
+  int:"Intermediate — training consistently for a few months and comfortable with the basics.",
+  adv:"Advanced — years of consistent training. Technical movements rank normally and volume runs "+
+      "slightly higher."
+};
+function syncAthlete(){
+  bwEl.value=athlete.bw; sexEl.value=athlete.sex; divEl.value=athlete.div; lvlEl.value=athlete.lvl;
+  drawLevelHint();
+}
+function drawLevelHint(){
+  const el=document.getElementById("lvlhint");
+  if(el) el.textContent=LVL_HINT[athlete.lvl]||"";
+}
+function readAthlete(){
+  const v=parseFloat(bwEl.value);
+  athlete.bw = (isFinite(v)&&v>=35&&v<=250) ? v : 75;
+  athlete.sex=sexEl.value; athlete.div=divEl.value;
+  if(LVL_HINT[lvlEl.value]) athlete.lvl=lvlEl.value;
+  drawLevelHint(); drawStandards(); save(); renderOut();
+}
+[bwEl,sexEl,divEl,lvlEl].forEach(el=>el.addEventListener("change",readAthlete));
+
+const STANDARDS={
+  women:{Open:"Sled push 102 kg · sled pull 78 kg · carry 2 × 16 kg · lunge 10 kg · wall ball 4 kg",
+         Pro:"Sled push 152 kg · sled pull 103 kg · carry 2 × 24 kg · lunge 20 kg · wall ball 6 kg"},
+  men:{Open:"Sled push 152 kg · sled pull 103 kg · carry 2 × 24 kg · lunge 20 kg · wall ball 6 kg",
+       Pro:"Sled push 202 kg · sled pull 153 kg · carry 2 × 32 kg · lunge 30 kg · wall ball 9 kg"}
+};
+/* Open/Pro is a HYROX construct. DEKA scales by gender and age group with identical reps and
+   distances; The Hybrid Games runs solo and doubles categories. Neither has a heavier "Pro" weight
+   tier, so the selector is hidden and the load left unmultiplied for those formats rather than
+   inventing a scale. */
+const hasStandards=()=>race.id==="hyrox";
+function drawStandards(){
+  const el=document.getElementById("stdline");
+  const fld=document.getElementById("divfield");
+  if(!hasStandards()){
+    fld.hidden=true;
+    athlete.div="Open";
+    divEl.value="Open";
+    el.textContent=esc(race.name)+" scales loads by division, not by an Open/Pro standard — "+
+      "check the organiser's current weights before you race.";
+    return;
+  }
+  fld.hidden=false;
+  el.textContent="Your HYROX standards — "+STANDARDS[athlete.sex][athlete.div];
+}
+
+/* ---------- races ---------- */
+const racesEl=document.getElementById("races");
+DB.races.forEach(r=>{
+  const b=document.createElement("button");
+  b.className="race"; b.type="button"; b.textContent=r.name;
+  b.setAttribute("aria-pressed",r.id===race.id);
+  b.onclick=()=>{
+    race=r; stationId=null;
+    racesEl.querySelectorAll(".race").forEach(x=>x.setAttribute("aria-pressed","false"));
+    b.setAttribute("aria-pressed","true");
+    drawStandards(); save(); renderRace(); renderOut();
+  };
+  racesEl.appendChild(b);
+});
+
+function renderRace(){
+  document.getElementById("blurb").innerHTML =
+    esc(race.blurb)+'<em>'+esc(race.note)+'</em>';
+  document.getElementById("attrib").textContent = race.owner;
+  const el=document.getElementById("stationbody");
+
+  if(view==="session"){
+    renderSessionBuilder(el);
+  } else {
+    el.innerHTML =
+      '<div class="head"><h2>What can\'t you do today?</h2>'+
+      '<span class="count">'+race.stations.length+' stations</span></div>'+
+      '<p class="hint">Pick the one your kit or your gym is stopping you training.</p>'+
+      '<div class="stations">'+race.stations.map((s,i)=>{
+        const st=DB.stations[s.id];
+        return '<button class="station" type="button" data-id="'+s.id+'" aria-pressed="'+
+          (stationId===s.id)+'"><em>'+String(i+1).padStart(2,"0")+'</em>'+esc(st.name)+
+          '<u>'+esc(s.spec)+'</u></button>';
+      }).join("")+'</div>';
+    el.querySelectorAll(".station").forEach(b=>{
+      b.onclick=()=>{
+        const picked = stationId!==b.dataset.id;
+        stationId = picked ? b.dataset.id : null;
+        renderRace(); renderOut();
+        /* The locker and athlete panels are long, so the answer sits well below the fold. Bring it
+           to the athlete rather than making them hunt for it. */
+        if(picked) revealOut();
+      };
+    });
+  }
+}
+
+/* ---------- session builder ---------- */
+function estimateWork(stationId,qty,unit){
+  if(unit==="s") return qty;
+  const rate=DB.stationRates[stationId];
+  if(!rate) return null;
+  const rUnit=rate[0], rPerMin=rate[1];
+  if(rUnit==="cal"||unit==="cal") return null;
+  if(unit!==rUnit) return null;
+  return qty/rPerMin*60;
+}
+
+function pickToMv(stationId,pick){
+  const rate=DB.stationRates[stationId];
+  const nativeUnit=rate?rate[0]:"reps";
+  if(pick.native!=null) return {stationId:stationId,qty:pick.native,unit:nativeUnit};
+  if(pick.time!=null) return {stationId:stationId,qty:pick.time,unit:"s"};
+  return {stationId:stationId,qty:null,unit:null};
+}
+
+/* A pair is only worth prescribing (rather than merely suggesting) when it closes a real gap.
+   Below this margin the second movement adds fatigue without adding much transfer. */
+const PAIR_PRESCRIBE_MIN = 5;
+const SESSION_TOP_N = 3;
+
+/* Base working seconds for one selected station, before any budget scaling. */
+function stationWork(id){
+  const pick=sessionPicks[id]||{native:null,time:null};
+  const mv=pickToMv(id,pick);
+  if(mv.qty==null){
+    const rs=race.stations.find(s=>s.id===id);
+    return {sec: rs?rs.work:null, label: rs?rs.spec:"race default", fromRace:true};
+  }
+  const sec=estimateWork(id,mv.qty,mv.unit);
+  const unitLabel=mv.unit==="m"?"m":mv.unit==="s"?"s":"reps";
+  return {sec:sec, label:(Number.isInteger(mv.qty)?mv.qty:mv.qty.toFixed(1))+" "+unitLabel, fromRace:false};
+}
+
+/* Rank the substitutes for one station and dose them at the given working seconds. */
+function planStation(id, workSec, forcedSets){
+  const d=DB.stations[id];
+  const w=DB.profiles[d.profile];
+  const pool=DB.exercises.filter(e=>have(e));
+  if(!pool.length) return {d:d, ranked:[]};
+  /* Rank by transfer x suitability so the order is usable, but keep .score as the pure Transfer
+     Score — the displayed number must keep its meaning. */
+  const ranked=pool.map(e=>{
+                     const c=components(d,e), s=suitability(e), sc=total(w,c,d.profile);
+                     return {e,c,score:sc,fit:sc*s.mult,suit:s};
+                   })
+                   .sort((a,b)=>b.fit-a.fit).slice(0,SESSION_TOP_N);
+  ranked.forEach(r=>{
+    let best=null;
+    pool.forEach(p=>{
+      if(p.name===r.e.name) return;
+      /* Weight the partner by suitability too, or the app ranks plyometrics out of the main list
+         and then cheerfully suggests one as the pair. `score` stays the honest pair score; `pick`
+         is only used to choose between candidates. */
+      const s=total(w,pairComponents(d,r.e,p),d.profile);
+      const pick=s*suitability(p).mult;
+      if(!best||pick>best.pick) best={p,score:s,pick:pick};
+    });
+    r.pair=(best&&best.score-r.score>=1)?best:null;
+    r.prescribePair=!!(best&&best.score-r.score>=PAIR_PRESCRIBE_MIN);
+    r.worst=r.c.indexOf(Math.min(...r.c));
+    if(workSec){
+      if(r.prescribePair){
+        /* Split the station's work between the two movements so total volume is unchanged —
+           the athlete alternates rather than doing twice the work. */
+        const half=workSec/2;
+        r.rx=prescribe(r.e,half,d.profile,forcedSets);
+        r.rxB=prescribe(r.pair.p,half,d.profile,forcedSets);
+        r.loadB=prescribeLoad(r.pair.p);
+      } else {
+        r.rx=prescribe(r.e,workSec,d.profile,forcedSets);
+      }
+    } else {
+      r.rx={dose:"Dose not available",
+        detail:"Couldn't estimate a working time for this one — set your own time above, or match the "+
+          "station's usual intensity by feel.",
+        cue:"", rest:"", sets:0, perSec:0, restSec:0};
+    }
+    r.load=prescribeLoad(r.e);
+  });
+  return {d:d, ranked:ranked};
+}
+
+/* Seconds the whole session takes at a given work-scale, including rest. The top-ranked option for
+   each station is what gets timed, since that is what the plan prescribes. */
+function projectSession(ids, scale){
+  const forced = sessionFormat==="circuit" ? circuitRounds : 0;
+  let workTotal=0, restTotal=0, perRound=0, dosed=0;
+  ids.forEach(id=>{
+    const base=stationWork(id);
+    if(!base.sec) return;
+    dosed++;
+    const sec=base.sec*scale;
+    const p=planStation(id, sec, forced);
+    const r=p.ranked[0]; if(!r) return;
+    const blocks = r.prescribePair ? [r.rx,r.rxB] : [r.rx];
+    blocks.forEach(b=>{
+      workTotal += b.sets*b.perSec;
+      perRound  += b.perSec;
+      if(sessionFormat==="straight") restTotal += Math.max(0,b.sets-1)*b.restSec;
+    });
+  });
+  if(sessionFormat==="circuit"){
+    /* One rest per round rather than per set — that is what makes a circuit shorter. */
+    const roundRest=60;
+    restTotal = Math.max(0,circuitRounds-1)*roundRest;
+  }
+  return {total:workTotal+restTotal, work:workTotal, rest:restTotal, perRound:perRound, dosed:dosed};
+}
+
+/* Largest scale <= 1 whose projected time fits the budget. Binary search because rest floors and
+   volume rounding make the relationship non-linear. */
+function fitToBudget(ids){
+  const budget=timeBudgetMin*60;
+  const full=projectSession(ids,1);
+  if(full.total<=budget||full.total===0) return {scale:1, proj:full, scaled:false};
+  let lo=0.05, hi=1;
+  for(let i=0;i<14;i++){
+    const mid=(lo+hi)/2;
+    if(projectSession(ids,mid).total<=budget) lo=mid; else hi=mid;
+  }
+  return {scale:lo, proj:projectSession(ids,lo), scaled:true, fullTotal:full.total};
+}
+
+function renderSessionBuilder(el){
+  const pickedCount=race.stations.filter(s=>s.id in sessionPicks).length;
+  el.innerHTML =
+    '<div class="head"><h2>What do you want to train?</h2>'+
+    '<span class="count">'+pickedCount+' picked</span></div>'+
+    '<p class="hint">Tap every station you want in this session — as many as you like. Add your '+
+    'own distance, reps or time for any of them; leave it blank to use the race\'s standard.</p>'+
+    '<div class="stations">'+race.stations.map((s,i)=>{
+      const st=DB.stations[s.id];
+      return '<button class="station" type="button" data-id="'+s.id+'" aria-pressed="'+(s.id in sessionPicks)+'">'+
+        '<em>'+String(i+1).padStart(2,"0")+'</em>'+esc(st.name)+'<u>'+esc(s.spec)+'</u></button>';
+    }).join("")+'</div>'+
+    '<div class="sessopts">'+
+      '<div class="fmt" role="group" aria-label="Session format">'+
+        '<button class="modebtn" type="button" data-fmt="circuit" aria-pressed="'+(sessionFormat==="circuit")+'">Circuit</button>'+
+        '<button class="modebtn" type="button" data-fmt="straight" aria-pressed="'+(sessionFormat==="straight")+'">Straight sets</button>'+
+      '</div>'+
+      '<label class="numfld">I have <input type="number" min="5" max="180" step="5" id="budgetInput" value="'+timeBudgetMin+'"> min</label>'+
+      (sessionFormat==="circuit"
+        ? '<label class="numfld">Rounds <input type="number" min="1" max="10" step="1" id="roundsInput" value="'+circuitRounds+'"></label>'
+        : '')+
+    '</div>'+
+    '<p class="hint" style="margin-top:8px">'+(sessionFormat==="circuit"
+      ? 'Circuit — one set of each station per round, rest between rounds. Keeps the numbers small.'
+      : 'Straight sets — all sets of one station before moving on. Rest between every set.')+'</p>'+
+    '<div class="picklist" id="picklist"></div>';
+
+  el.querySelectorAll(".station").forEach(b=>{
+    b.onclick=()=>{
+      const id=b.dataset.id;
+      if(id in sessionPicks) delete sessionPicks[id];
+      else sessionPicks[id]={native:null,time:null};
+      save(); renderSessionBuilder(el); renderOut();
+    };
+  });
+  el.querySelectorAll(".fmt .modebtn").forEach(b=>{
+    b.onclick=()=>{
+      if(sessionFormat===b.dataset.fmt) return;
+      sessionFormat=b.dataset.fmt; save(); renderSessionBuilder(el); renderOut();
+    };
+  });
+  document.getElementById("budgetInput").addEventListener("input",e=>{
+    const v=parseInt(e.target.value,10);
+    timeBudgetMin=(v>=5&&v<=180)?v:40;
+    save(); renderOut();
+  });
+  const ri=document.getElementById("roundsInput");
+  if(ri) ri.addEventListener("input",e=>{
+    const v=parseInt(e.target.value,10);
+    circuitRounds=(v>=1&&v<=10)?v:4;
+    save(); renderOut();
+  });
+  renderPickList();
+}
+
+function renderPickList(){
+  const listEl=document.getElementById("picklist");
+  if(!listEl) return;
+  const ids=race.stations.map(s=>s.id).filter(id=>id in sessionPicks);
+  if(!ids.length){ listEl.innerHTML=""; return; }
+  listEl.innerHTML = ids.map(id=>{
+    const st=DB.stations[id];
+    const raceSpec=race.stations.find(s=>s.id===id);
+    const rate=DB.stationRates[id];
+    const nativeUnit=rate?rate[0]:"reps";
+    const pick=sessionPicks[id];
+    const nativeField = nativeUnit==="cal" ? "" :
+      '<label>Override '+(nativeUnit==="m"?"distance (m)":"reps")+
+      ' <input type="number" min="0" step="1" data-id="'+id+'" data-kind="native" value="'+
+      (pick.native!=null?pick.native:"")+'"></label>';
+    return '<div class="pickrow" data-id="'+id+'">'+
+      '<div class="pickrow-head"><b>'+esc(st.name)+'</b>'+
+      '<button class="pickrow-remove" type="button" data-id="'+id+'" aria-label="Remove '+esc(st.name)+'">×</button></div>'+
+      '<span class="pickrow-default">Race default: '+esc(raceSpec.spec)+' · ≈ '+mmss(raceSpec.work)+' of work</span>'+
+      '<div class="ovr">'+nativeField+
+      '<label>Override time (s) <input type="number" min="0" step="1" data-id="'+id+'" data-kind="time" value="'+
+      (pick.time!=null?pick.time:"")+'"></label></div></div>';
+  }).join("");
+
+  listEl.querySelectorAll("input[data-kind]").forEach(inp=>{
+    inp.addEventListener("input",()=>{
+      const id=inp.dataset.id, kind=inp.dataset.kind;
+      const v=inp.value.trim();
+      const n=v===""?null:parseFloat(v);
+      if(!sessionPicks[id]) return;
+      sessionPicks[id][kind]=(n!=null&&isFinite(n)&&n>=0)?n:null;
+      save(); renderOut();
+    });
+  });
+  listEl.querySelectorAll(".pickrow-remove").forEach(b=>{
+    b.onclick=()=>{
+      delete sessionPicks[b.dataset.id];
+      save(); renderSessionBuilder(document.getElementById("stationbody")); renderOut();
+    };
+  });
+}
+
+/* ---------- readout ---------- */
+function swapLines(header,r){
+  return [
+    header,
+    "Do instead: "+r.e.name,
+    r.rx.dose+(r.load?" @ "+r.load:"")+(r.rx.rest?" · "+r.rx.rest:""),
+    r.prescribePair?("Then, same block: "+r.pair.p.name+" — "+r.rxB.dose+(r.loadB?" @ "+r.loadB:"")):"",
+    r.rx.cue,
+    "Transfer Score "+Math.round(r.score)+"% — weakest match is "+LABELS[r.worst].toLowerCase(),
+    r.prescribePair
+      ? ("Paired to reach "+Math.round(r.pair.score)+"%")
+      : (r.pair?("Pair with "+r.pair.p.name+" to reach "+Math.round(r.pair.score)+"%"):"")
+  ].filter(Boolean);
+}
+function wireCards(container,list){
+  container.querySelectorAll(".card").forEach((el,i)=>{
+    const item=list[i]; if(!item) return;
+    const r=item.r;
+    const meta=item.meta||{};
+    const det=el.querySelector(".detail");
+    const tog=el.querySelector(".toggle");
+    tog.onclick=()=>{
+      const open=tog.getAttribute("aria-expanded")==="true";
+      tog.setAttribute("aria-expanded",open?"false":"true");
+      det.hidden=open;
+      tog.textContent=open?"Show breakdown":"Hide breakdown";
+    };
+    const cp=el.querySelector(".copy");
+    cp.onclick=async()=>{
+      const lines=swapLines(item.header,r).concat([
+        "","Estimate from a coach-calibrated model, not a measurement. Not medical advice."
+      ]).join("\n");
+      try{ await navigator.clipboard.writeText(lines); cp.textContent="Copied";
+           setTimeout(()=>cp.textContent="Copy this swap",1600); }
+      catch(err){ cp.textContent="Press Ctrl+C"; }
+    };
+    const rateBtn=el.querySelector(".rate");
+    const rateBox=el.querySelector(".caterate");
+    rateBtn.onclick=()=>{
+      const open=rateBtn.getAttribute("aria-expanded")==="true";
+      rateBtn.setAttribute("aria-expanded",open?"false":"true");
+      rateBox.hidden=open;
+      rateBtn.textContent=open?"Rate this swap":"Hide rating";
+    };
+    rateBox.querySelectorAll(".scale button").forEach(b=>{
+      b.onclick=()=>{
+        rateBox.querySelectorAll(".scale button").forEach(x=>x.setAttribute("aria-pressed","false"));
+        b.setAttribute("aria-pressed","true");
+        logFeedback({when:new Date().toISOString(),race:meta.race||"",station:meta.station||"",
+                     spec:meta.spec||"",substitute:r.e.name,dose:r.rx.dose,load:r.load,
+                     predicted:Math.round(r.score),felt:Number(b.dataset.v),
+                     bw:athlete.bw,sex:athlete.sex,div:athlete.div});
+        rateBox.querySelector(".fbdoneslot").innerHTML=
+          '<p class="fbdone">Logged. Predicted '+Math.round(r.score)+'%, you felt '+b.dataset.v+
+          '/10. Stored on this device — export it from the Athlete Log section below.</p>';
+      };
+    });
+  });
+}
+
+function renderOut(){
+  document.getElementById("kitcount").textContent =
+    kit.size===0 ? "nothing selected" : kit.size+" selected";
+  const out=document.getElementById("out");
+
+  if(view==="session"){ renderSessionOut(out); return; }
+
+  if(!stationId){
+    out.innerHTML='<div class="head"><h2>Your closest matches</h2></div>'+
+      '<div class="waiting">Pick a station above and the ranked substitutions appear here.</div>';
+    return;
+  }
+
+  const d=DB.stations[stationId];
+  const spec=race.stations.find(s=>s.id===stationId);
+  const w=DB.profiles[d.profile];
+  const pool=DB.exercises.filter(e=>have(e));
+
+  if(!pool.length){
+    out.innerHTML='<div class="head"><h2>Your closest matches</h2></div>'+
+      '<div class="waiting">Nothing in your locker can stand in for this yet. '+
+      'Bodyweight and open floor space alone will get you started.</div>';
+    return;
+  }
+
+  const ranked=pool.map(e=>{
+                     const c=components(d,e), s=suitability(e), sc=total(w,c,d.profile);
+                     return {e,c,score:sc,fit:sc*s.mult,suit:s};
+                   })
+                   .sort((a,b)=>b.fit-a.fit).slice(0,6);
+  ranked.forEach(r=>{
+    let best=null;
+    pool.forEach(p=>{
+      if(p.name===r.e.name) return;
+      /* Weight the partner by suitability too, or the app ranks plyometrics out of the main list
+         and then cheerfully suggests one as the pair. `score` stays the honest pair score; `pick`
+         is only used to choose between candidates. */
+      const s=total(w,pairComponents(d,r.e,p),d.profile);
+      const pick=s*suitability(p).mult;
+      if(!best||pick>best.pick) best={p,score:s,pick:pick};
+    });
+    r.pair=(best&&best.score-r.score>=1)?best:null;
+    r.worst=r.c.indexOf(Math.min(...r.c));
+    r.rx=prescribe(r.e,spec.work,d.profile);
+    r.load=prescribeLoad(r.e);
+  });
+
+  /* Free mode leads with one answer fitted to this athlete; the rest stay one tap away rather than
+     being removed, since the gym may not have what ranked first free at that moment. */
+  const LVL_WORD={beg:"beginner",int:"intermediate",adv:"advanced"};
+  out.innerHTML=
+    '<div class="head"><h2>Do this instead</h2>'+
+    '<span class="count">'+pool.length+' available</span></div>'+
+    '<p class="tally">'+esc(race.name)+' — replacing '+esc(d.name)+' · '+esc(spec.spec)+
+    ' ≈ '+mmss(spec.work)+' of work · fitted to '+athlete.bw+' kg, '+
+    esc(LVL_WORD[athlete.lvl]||"intermediate")+'</p>'+
+    '<p class="estflag"><span>Coaches have reviewed this model and agreed the swaps hold up. They are '+
+    'still estimates rather than measurements — a considered starting point, not an answer.</span></p>'+
+    /* A 65% and a 97% look equally confident on a card, so say plainly when the best your kit allows
+       is a poor stand-in. Better an honest "this barely covers it" than a confident bad swap. */
+    (ranked[0].score<80
+      ? '<p class="weakflag"><b>This is the closest your kit allows, but it is not a good match.</b>'+
+        'At '+Math.round(ranked[0].score)+'% it misses a lot of what the station asks for. Adding kit '+
+        'would help more than grinding this one — or train something else today and come back to '+
+        esc(d.name)+'.</p>'
+      : '')+
+    card(ranked[0],0,d,spec)+
+    (ranked.length>1
+      ? '<button class="morebtn" type="button" id="morealts" aria-expanded="false">Show '+
+        (ranked.length-1)+' other options</button>'+
+        '<div id="altwrap" hidden>'+ranked.slice(1).map((r,i)=>card(r,i+1,d,spec)).join("")+'</div>'
+      : '')+
+    '<p class="weighting">Weighted as a '+esc(d.profile.toLowerCase())+' station</p>'+
+    sourceLine(stationId);
+
+  const more=document.getElementById("morealts");
+  if(more) more.onclick=()=>{
+    const wrap=document.getElementById("altwrap");
+    const open=more.getAttribute("aria-expanded")==="true";
+    more.setAttribute("aria-expanded",open?"false":"true");
+    wrap.hidden=open;
+    more.textContent=open?("Show "+(ranked.length-1)+" other options"):"Hide other options";
+  };
+
+  wireCards(out, ranked.map(r=>({r:r,
+    header:race.name+" — can't do "+d.name+" ("+spec.spec+")",
+    meta:{race:race.name,station:d.name,spec:spec.spec}})));
+}
+
+function renderSessionOut(out){
+  const ids=race.stations.map(s=>s.id).filter(id=>id in sessionPicks);
+
+  if(!ids.length){
+    out.innerHTML='<div class="head"><h2>Your session, adapted</h2></div>'+
+      '<div class="waiting">Tap stations above to start building a session.</div>';
+    return;
+  }
+
+  const fit=fitToBudget(ids);
+  const forced=sessionFormat==="circuit"?circuitRounds:0;
+  const results=ids.map(id=>{
+    const base=stationWork(id);
+    const sec=base.sec?base.sec*fit.scale:null;
+    const p=planStation(id, sec, forced);
+    return {d:p.d, ranked:p.ranked, spec:{spec:base.label, work:sec||0}, base:base};
+  });
+
+  let html='<div class="head"><h2>Your session, adapted</h2>'+
+    '<span class="count">'+results.length+' station'+(results.length===1?"":"s")+'</span></div>';
+  html+='<p class="tally">'+esc(race.name)+' · '+
+    (sessionFormat==="circuit"?circuitRounds+' rounds, circuit':'straight sets')+'</p>';
+
+  if(fit.proj.dosed){
+    html+='<p class="budgetline'+(fit.scaled?' over':'')+'">'+
+      (fit.scaled
+        ? 'Trimmed to fit <b>'+timeBudgetMin+' min</b>. At full race volume this would run about <b>'+
+          mmss(fit.fullTotal)+'</b>, so every station was cut to <b>'+Math.round(fit.scale*100)+
+          '%</b> of its volume. Same movements, less of each — the session you can actually finish.'
+        : 'Projected <b>'+mmss(fit.proj.total)+'</b> including rest, inside your <b>'+timeBudgetMin+
+          ' min</b>. Add stations or volume if you want to use the time.')+
+      ' <span style="opacity:.75">Work '+mmss(fit.proj.work)+' · rest '+mmss(fit.proj.rest)+
+      (sessionFormat==="circuit"?' (60 s between rounds)':' (between sets)')+'.</span></p>';
+  }
+
+  html+='<p class="estflag"><span>Coach-reviewed, but still estimates rather than measurements. '+
+    'Stations you haven\'t overridden are timed from the race\'s own numbers; overrides and any trimming '+
+    'are estimates. Projected time ignores transitions and how fast you actually move.</span></p>';
+
+  const flat=[];
+  results.forEach(res=>{
+    html+='<p class="tally" style="margin-top:22px">'+esc(res.d.name)+' — '+esc(res.spec.spec)+
+      (fit.scaled&&res.base.sec?' <span style="opacity:.6">trimmed to ≈ '+mmss(res.spec.work)+'</span>':'')+'</p>';
+    if(!res.ranked.length){
+      html+='<div class="waiting">Nothing in your locker can stand in for this yet.</div>';
+      return;
+    }
+    html+=res.ranked.map((r,i)=>{
+      flat.push({r:r, header:res.d.name+" ("+res.spec.spec+")",
+        meta:{race:race.name+" session", station:res.d.name, spec:res.spec.spec}});
+      return card(r,i,res.d,res.spec);
+    }).join("");
+  });
+
+  html+='<div class="actions" style="margin-top:14px;border-top:none;padding-top:0">'+
+    '<button class="act" type="button" id="copysession">Copy whole session</button></div>';
+
+  out.innerHTML=html;
+  wireCards(out, flat);
+
+  const cs=document.getElementById("copysession");
+  if(cs) cs.onclick=async()=>{
+    let lines=["KITLESS session — "+race.name+" · "+
+      (sessionFormat==="circuit"?circuitRounds+" rounds, circuit":"straight sets")+
+      " · projected "+mmss(fit.proj.total)+" incl. rest"];
+    if(fit.scaled) lines.push("Trimmed to "+Math.round(fit.scale*100)+"% of race volume to fit "+timeBudgetMin+" min.");
+    results.forEach(res=>{
+      if(!res.ranked.length) return;
+      lines.push("");
+      lines=lines.concat(swapLines(res.d.name+" ("+res.spec.spec+")", res.ranked[0]));
+    });
+    lines.push("");
+    lines.push("Estimate from a coach-calibrated model, not a measurement. Not medical advice.");
+    try{ await navigator.clipboard.writeText(lines.join("\n")); cs.textContent="Copied";
+         setTimeout(()=>cs.textContent="Copy whole session",1600); }
+    catch(err){ cs.textContent="Press Ctrl+C"; }
+  };
+}
+
+function card(r,i,d,spec){
+  const kitline=r.e.e1+(r.e.e2!=="None"?" + "+r.e.e2:"");
+  const bars=r.c.map((v,j)=>
+    '<span class="bar" data-low="'+(j===r.worst?1:0)+'">'+
+      '<i style="height:'+Math.max(3,Math.round(v*0.33))+'px"></i><u>'+SHORT[j]+'</u></span>').join("");
+  const rows=r.c.map((v,j)=>
+    '<div class="row" data-low="'+(j===r.worst?1:0)+'"><span>'+LABELS[j]+'</span>'+
+      '<div class="track"><i style="width:'+Math.round(v)+'%"></i></div>'+
+      '<b>'+Math.round(v)+'</b></div>').join("");
+  const pair=r.prescribePair
+    ? '<p class="note pair"><b>Pair</b><i>Prescribed as a pair — alone this leaves '+
+      LABELS[r.worst].toLowerCase()+' short, together they reach '+
+      '<span class="uplift">'+Math.round(r.pair.score)+'%</span></i></p>'
+    : (r.pair
+      ? '<p class="note pair"><b>Pair</b><i>Add <s>'+esc(r.pair.p.name)+'</s> to cover it '+
+        '<span class="uplift">'+Math.round(r.pair.score)+'%</span></i></p>'
+      : '<p class="note pair"><b>Pair</b><i>Nothing in your locker meaningfully improves on this alone.</i></p>');
+  const pairDose=r.prescribePair
+    ? '<div class="pairblock"><span class="pairtag">then, same block</span>'+
+      '<div class="dose">'+esc(r.pair.p.name)+' — '+esc(r.rxB.dose)+
+        (r.loadB?' <span style="color:var(--warm)">@ '+esc(r.loadB)+'</span>':'')+'</div></div>'
+    : '';
+  return '<article class="card">'+
+    '<div class="top"><div class="rank">'+(i+1)+'</div>'+
+      '<div class="nm"><h4>'+esc(r.e.name)+'</h4><p class="kitline">'+esc(kitline)+'</p></div></div>'+
+    '<div class="readout"><div class="score"><b>'+Math.round(r.score)+'<i>%</i></b>'+
+      '<span>Transfer</span></div><div class="bars">'+bars+'</div></div>'+
+    '<div class="rx"><b>Do this</b><div class="dose">'+esc(r.rx.dose)+
+      (r.load?' <span style="color:var(--warm)">@ '+esc(r.load)+'</span>':'')+
+      (r.rx.rest?' <span style="opacity:.55">· '+esc(r.rx.rest)+'</span>':'')+'</div>'+
+      pairDose+
+      '<p class="cue">'+esc(r.rx.cue)+' <em>'+esc(r.rx.detail)+'</em></p></div>'+
+    '<p class="note gap"><b>Misses</b><i>'+LABELS[r.worst].toLowerCase()+'</i></p>'+
+    ((r.suit&&r.suit.notes.length)
+      ? '<p class="note suit"><b>For you</b><i>'+r.suit.notes.map(esc).join(' ')+'</i></p>' : '')+
+    ((DB.exNotes&&DB.exNotes[r.e.name])
+      ? '<p class="note howto"><b>How</b><i>'+esc(DB.exNotes[r.e.name])+'</i></p>' : '')+
+    pair+
+    '<div class="detail" hidden>'+rows+'</div>'+
+    '<div class="actions">'+
+      '<button class="act toggle" type="button" aria-expanded="false">Show breakdown</button>'+
+      '<button class="act copy" type="button">Copy this swap</button>'+
+      '<button class="act rate" type="button" aria-expanded="false">Rate this swap</button>'+
+    '</div>'+
+    '<div class="caterate" hidden>'+
+      '<p>Trained it? How close did this one feel to the real station?</p>'+
+      '<div class="scale">'+
+        Array.from({length:11},(_,v)=>'<button type="button" data-v="'+v+'" aria-pressed="false">'+v+'</button>').join("")+
+      '</div><div class="fbdoneslot"></div>'+
+    '</div></article>';
+}
+
+/* ---------- evidence ---------- */
+function renderEvidence(){
+  const ev=DB.evidence; if(!ev) return;
+  const sci=document.getElementById("ev-science");
+  if(sci) sci.innerHTML=ev.science.map(s=>
+    '<p class="cited"><a href="'+esc(s.url)+'" target="_blank" rel="noopener noreferrer">'+
+    esc(s.cite)+'</a><em>'+esc(s.note)+'</em></p>').join("");
+  const gd=document.getElementById("ev-guidance");
+  if(gd) gd.innerHTML='<p class="citelist">'+ev.guidance.map(g=>
+    '<a href="'+esc(g.url)+'" target="_blank" rel="noopener noreferrer">'+esc(g.name)+'</a>').join(" · ")+'</p>';
+  const ag=document.getElementById("ev-agreement");
+  if(ag&&ev.agreement){
+    const a=ev.agreement;
+    ag.innerHTML='Of <b>'+a.n+'</b> substitutions recommended by those sources, this model scores a mean of '+
+      '<b>'+a.mean+'%</b>. <b>'+a.atLeast70+' of '+a.n+'</b> score 70% or better and <b>'+a.atLeast80+
+      '</b> score 80% or better, with several ranking in the top five of '+DB.exercises.length+
+      ' exercises. Checked '+esc(a.checked)+'.';
+  }
+}
+
+/* Guidance sources relevant to one station, for the readout line. */
+function stationSources(id){
+  const ev=DB.evidence; if(!ev) return [];
+  return ev.guidance.filter(g=>g.covers==="all"||g.covers.split(",").includes(id));
+}
+function sourceLine(id){
+  const src=stationSources(id).filter(g=>g.covers!=="all");
+  if(!src.length) return "";
+  return '<p class="weighting">Substitutions for this station also recommended by '+
+    src.map(g=>'<a href="'+esc(g.url)+'" target="_blank" rel="noopener noreferrer">'+esc(g.name.split(" - ")[0])+'</a>').join(", ")+
+    '</p>';
+}
+
+/* ---------- export ----------
+   Shown on screen rather than offered as a file download: a hosted copy of this page runs in a
+   sandbox that blocks pages from handing over files, so a download link silently did nothing there.
+   Selecting and copying works everywhere and needs no permission. */
+const LOG_COLS=["when","race","station","spec","substitute","dose","load","predicted","felt","bw","sex","div"];
+document.getElementById("exportlog").onclick=()=>{
+  let arr=[];
+  try{ arr=JSON.parse(localStorage.getItem(STORE+".log")||"[]"); }catch(e){}
+  const state=document.getElementById("logstate");
+  const box=document.getElementById("logout");
+  if(!arr.length){ state.textContent="Nothing logged yet."; box.hidden=true; return; }
+  document.getElementById("csvbox").value=
+    [LOG_COLS.join(",")].concat(arr.map(r=>LOG_COLS.map(c=>
+      '"'+String(r[c]===undefined?"":r[c]).replace(/"/g,'""')+'"').join(","))).join("\n");
+  box.hidden=false;
+  state.textContent=arr.length+" rating"+(arr.length===1?"":"s")+" — select all and copy.";
+};
+document.getElementById("copylog").onclick=async function(){
+  const ta=document.getElementById("csvbox");
+  try{ await navigator.clipboard.writeText(ta.value); this.textContent="Copied"; }
+  catch(err){ ta.select(); this.textContent="Press Ctrl+C"; }
+  setTimeout(()=>{this.textContent="Copy to clipboard";},1600);
+};
+document.getElementById("hidelog").onclick=()=>{
+  document.getElementById("logout").hidden=true;
+  document.getElementById("logstate").textContent="";
+};
+
+load(); syncAthlete(); drawStandards();
+groupsEl.querySelectorAll(".chip").forEach(c=>c.setAttribute("aria-pressed",kit.has(c.dataset.name)));
+racesEl.querySelectorAll(".race").forEach((b,i)=>b.setAttribute("aria-pressed",DB.races[i].id===race.id));
+renderRace(); renderOut(); drawCustom(); renderEvidence();
+</script>
+</body>
+</html>
